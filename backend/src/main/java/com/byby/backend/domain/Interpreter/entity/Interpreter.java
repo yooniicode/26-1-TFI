@@ -1,0 +1,56 @@
+package com.byby.backend.domain.Interpreter.entity;
+
+import com.byby.backend.common.entity.BaseEntity;
+import com.byby.backend.common.enums.InterpreterRole;
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+@Entity
+@Table(name = "interpreter")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Interpreter extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @Column(nullable = false)
+    private UUID authUserId; // Supabase Auth user id
+
+    @Column(nullable = false, length = 100)
+    private String name;
+
+    @Column(length = 20)
+    private String phone;
+
+    @Column(nullable = false, length = 50)
+    @Enumerated(EnumType.STRING)
+    private InterpreterRole role;
+
+    @ElementCollection
+    @CollectionTable(name = "interpreter_language", joinColumns = @JoinColumn(name = "interpreter_id"))
+    @Column(name = "language")
+    private List<String> languages = new ArrayList<>();
+
+    @Column(nullable = false)
+    private boolean active = true;
+
+    @Builder
+    public Interpreter(UUID authUserId, String name, String phone,
+                       InterpreterRole role, List<String> languages) {
+        this.authUserId = authUserId;
+        this.name = name;
+        this.phone = phone;
+        this.role = role;
+        this.languages = languages != null ? languages : new ArrayList<>();
+    }
+
+    public void deactivate() {
+        this.active = false;
+    }
+}
