@@ -16,4 +16,9 @@ public class InterpreterRequest {
             @NotNull InterpreterRole role,
             List<String> languages
     ) {}
+
+    public record Update(
+            String phone,
+            InterpreterRole role
+    ) {}
 }

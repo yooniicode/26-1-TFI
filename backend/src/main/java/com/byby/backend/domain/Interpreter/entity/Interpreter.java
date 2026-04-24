@@ -50,6 +50,11 @@ public class Interpreter extends BaseEntity {
         this.languages = languages != null ? languages : new ArrayList<>();
     }
 
+    public void updateInfo(String phone, InterpreterRole role) {
+        if (phone != null) this.phone = phone;
+        if (role != null) this.role = role;
+    }
+
     public void deactivate() {
         this.active = false;
     }

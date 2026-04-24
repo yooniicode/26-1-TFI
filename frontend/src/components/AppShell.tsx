@@ -41,15 +41,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* 상단 헤더 */}
       <header className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
         <span className="font-bold text-primary-700 text-lg">TFI</span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {me && (
             <span className="text-xs text-gray-500">
               {me.name ?? me.role}
             </span>
           )}
-          <button onClick={handleLogout} className="text-xs text-gray-400 hover:text-red-500">
-            로그아웃
-          </button>
+          <Link href="/mypage" className="flex flex-col gap-1 p-1 rounded hover:bg-gray-100 transition-colors" aria-label="마이페이지">
+            <span className="block w-5 h-0.5 bg-gray-600 rounded" />
+            <span className="block w-5 h-0.5 bg-gray-600 rounded" />
+            <span className="block w-5 h-0.5 bg-gray-600 rounded" />
+          </Link>
         </div>
       </header>
 

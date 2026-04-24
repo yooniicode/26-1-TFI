@@ -54,6 +54,16 @@ public class InterpreterService {
     }
 
     @Transactional
+    public InterpreterResponse.Detail update(UUID id, InterpreterRequest.Update req, UserPrincipal principal) {
+        Interpreter interpreter = findInterpreter(id);
+        if (!principal.isAdmin() && !interpreter.getAuthUserId().equals(principal.getAuthUserId())) {
+            throw new GeneralException(GeneralErrorCode.FORBIDDEN);
+        }
+        interpreter.updateInfo(req.phone(), req.role());
+        return InterpreterResponse.Detail.from(interpreter);
+    }
+
+    @Transactional
     public void deactivate(UUID id, UserPrincipal principal) {
         if (!principal.isAdmin()) throw new GeneralException(GeneralErrorCode.FORBIDDEN);
         findInterpreter(id).deactivate();

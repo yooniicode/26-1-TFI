@@ -56,6 +56,8 @@ export const interpreterApi = {
   list:       (page = 0) => get<import('./types').Interpreter[]>(`/interpreters?page=${page}&size=20`),
   get:        (id: string) => get<import('./types').Interpreter>(`/interpreters/${id}`),
   create:     (body: unknown) => post<import('./types').Interpreter>('/interpreters', body),
+  update:     (id: string, body: { phone?: string; role?: import('./types').InterpreterRole }) =>
+    put<import('./types').Interpreter>(`/interpreters/${id}`, body),
   deactivate: (id: string) => patch<void>(`/interpreters/${id}/deactivate`),
 }
 

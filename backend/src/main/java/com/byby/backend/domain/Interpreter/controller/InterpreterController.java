@@ -54,6 +54,16 @@ public class InterpreterController {
                 Response.success(SuccessCode.OK, interpreterService.getById(id, principal)));
     }
 
+    @PutMapping("/{id}")
+    @Operation(summary = "통번역가 정보 수정 (본인 또는 ADMIN)")
+    public ResponseEntity<Response<InterpreterResponse.Detail>> update(
+            @PathVariable UUID id,
+            @Valid @RequestBody InterpreterRequest.Update req,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(
+                Response.success(SuccessCode.OK, interpreterService.update(id, req, principal)));
+    }
+
     @PatchMapping("/{id}/deactivate")
     @Operation(summary = "통번역가 비활성화")
     public ResponseEntity<Response<Void>> deactivate(
