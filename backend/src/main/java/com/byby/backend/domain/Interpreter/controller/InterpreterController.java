@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,6 +29,7 @@ public class InterpreterController {
     private final InterpreterService interpreterService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('interpreter', 'admin')")
     @Operation(summary = "통번역가 생성")
     public ResponseEntity<Response<InterpreterResponse.Detail>> create(
             @Valid @RequestBody InterpreterRequest.Create req,
@@ -37,6 +39,7 @@ public class InterpreterController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('interpreter', 'admin')")
     @Operation(summary = "통번역가 목록 조회")
     public ResponseEntity<Response<List<InterpreterResponse.Summary>>> getAll(
             @PageableDefault(size = 20) Pageable pageable,
@@ -46,6 +49,7 @@ public class InterpreterController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('interpreter', 'admin')")
     @Operation(summary = "통번역가 상세 조회")
     public ResponseEntity<Response<InterpreterResponse.Detail>> getById(
             @PathVariable UUID id,
@@ -55,6 +59,7 @@ public class InterpreterController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('interpreter', 'admin')")
     @Operation(summary = "통번역가 정보 수정 (본인 또는 ADMIN)")
     public ResponseEntity<Response<InterpreterResponse.Detail>> update(
             @PathVariable UUID id,
@@ -65,6 +70,7 @@ public class InterpreterController {
     }
 
     @PatchMapping("/{id}/deactivate")
+    @PreAuthorize("hasRole('admin')")
     @Operation(summary = "통번역가 비활성화")
     public ResponseEntity<Response<Void>> deactivate(
             @PathVariable UUID id,

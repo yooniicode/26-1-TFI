@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,6 +29,7 @@ public class MedicalScriptController {
     private final MedicalScriptService scriptService;
 
     @PostMapping("/generate")
+    @PreAuthorize("hasAnyRole('patient', 'interpreter', 'admin')")
     @Operation(summary = "의료 대본 생성")
     public ResponseEntity<Response<ScriptResponse.Detail>> generate(
             @Valid @RequestBody ScriptRequest.Generate req,
@@ -37,6 +39,7 @@ public class MedicalScriptController {
     }
 
     @GetMapping("/patient/{patientId}")
+    @PreAuthorize("hasAnyRole('interpreter', 'admin', 'patient')")
     @Operation(summary = "환자별 의료 대본 조회")
     public ResponseEntity<Response<List<ScriptResponse.Summary>>> getByPatient(
             @PathVariable UUID patientId,
@@ -47,6 +50,7 @@ public class MedicalScriptController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('interpreter', 'admin', 'patient')")
     @Operation(summary = "의료 대본 상세 조회")
     public ResponseEntity<Response<ScriptResponse.Detail>> getById(
             @PathVariable UUID id,

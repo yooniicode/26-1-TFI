@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,6 +29,7 @@ public class HandoverController {
     private final HandoverService handoverService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('interpreter', 'admin')")
     @Operation(summary = "인수인계 생성")
     public ResponseEntity<Response<HandoverResponse.Detail>> create(
             @Valid @RequestBody HandoverRequest.Create req,
@@ -37,6 +39,7 @@ public class HandoverController {
     }
 
     @GetMapping("/patient/{patientId}")
+    @PreAuthorize("hasAnyRole('interpreter', 'admin')")
     @Operation(summary = "환자별 인수인계 조회")
     public ResponseEntity<Response<List<HandoverResponse.Detail>>> getByPatient(
             @PathVariable UUID patientId,
@@ -47,6 +50,7 @@ public class HandoverController {
     }
 
     @PatchMapping("/{id}/assign")
+    @PreAuthorize("hasRole('admin')")
     @Operation(summary = "인수인계 담당 통번역가 배정")
     public ResponseEntity<Response<HandoverResponse.Detail>> assign(
             @PathVariable UUID id,

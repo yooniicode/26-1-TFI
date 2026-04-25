@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,6 +29,7 @@ public class ConsultationController {
     private final ConsultationService consultationService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('interpreter', 'admin')")
     @Operation(summary = "상담/통역 보고서 생성")
     public ResponseEntity<Response<ConsultationResponse.Detail>> create(
             @Valid @RequestBody ConsultationRequest.Create req,
@@ -37,6 +39,7 @@ public class ConsultationController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('interpreter', 'admin')")
     @Operation(summary = "상담/통역 보고서 목록 조회")
     public ResponseEntity<Response<List<ConsultationResponse.Summary>>> getAll(
             @PageableDefault(size = 20) Pageable pageable,
@@ -46,6 +49,7 @@ public class ConsultationController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('interpreter', 'admin', 'patient')")
     @Operation(summary = "상담/통역 보고서 상세 조회")
     public ResponseEntity<Response<ConsultationResponse.Detail>> getById(
             @PathVariable UUID id,
@@ -55,6 +59,7 @@ public class ConsultationController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('interpreter', 'admin')")
     @Operation(summary = "상담/통역 보고서 수정")
     public ResponseEntity<Response<ConsultationResponse.Detail>> update(
             @PathVariable UUID id,
@@ -65,6 +70,7 @@ public class ConsultationController {
     }
 
     @PatchMapping("/{id}/confirm")
+    @PreAuthorize("hasAnyRole('patient', 'admin')")
     @Operation(summary = "상담/통역 보고서 확인 처리")
     public ResponseEntity<Response<ConsultationResponse.Detail>> confirm(
             @PathVariable UUID id,
@@ -75,6 +81,7 @@ public class ConsultationController {
     }
 
     @GetMapping("/patient/{patientId}")
+    @PreAuthorize("hasAnyRole('interpreter', 'admin', 'patient')")
     @Operation(summary = "환자별 상담/통역 보고서 조회")
     public ResponseEntity<Response<List<ConsultationResponse.Summary>>> getByPatient(
             @PathVariable UUID patientId,
@@ -85,6 +92,7 @@ public class ConsultationController {
     }
 
     @GetMapping("/interpreter/{interpreterId}")
+    @PreAuthorize("hasAnyRole('interpreter', 'admin')")
     @Operation(summary = "통번역가별 상담/통역 보고서 조회")
     public ResponseEntity<Response<List<ConsultationResponse.Summary>>> getByInterpreter(
             @PathVariable UUID interpreterId,

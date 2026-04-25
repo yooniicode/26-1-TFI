@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,6 +32,7 @@ public class PatientController {
     private final ConsultationService consultationService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('interpreter', 'admin')")
     @Operation(summary = "이주민 생성")
     public ResponseEntity<Response<PatientResponse.Detail>> create(
             @Valid @RequestBody PatientRequest.Create req,
@@ -40,6 +42,7 @@ public class PatientController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('interpreter', 'admin')")
     @Operation(summary = "이주민 목록 조회")
     public ResponseEntity<Response<List<PatientResponse.Summary>>> getAll(
             @PageableDefault(size = 20) Pageable pageable,
@@ -49,6 +52,7 @@ public class PatientController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('interpreter', 'admin', 'patient')")
     @Operation(summary = "이주민 상세 조회")
     public ResponseEntity<Response<PatientResponse.Detail>> getById(
             @PathVariable UUID id,
@@ -58,6 +62,7 @@ public class PatientController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('interpreter', 'admin', 'patient')")
     @Operation(summary = "이주민 정보 수정")
     public ResponseEntity<Response<PatientResponse.Detail>> update(
             @PathVariable UUID id,
@@ -68,6 +73,7 @@ public class PatientController {
     }
 
     @GetMapping("/{id}/history")
+    @PreAuthorize("hasAnyRole('interpreter', 'admin', 'patient')")
     @Operation(summary = "이주민 상담 이력 조회")
     public ResponseEntity<Response<List<ConsultationResponse.Summary>>> getHistory(
             @PathVariable UUID id,
@@ -77,8 +83,8 @@ public class PatientController {
                 Response.success(SuccessCode.OK, consultationService.getByPatient(id, pageable, principal)));
     }
 
-    // 이주민 전용 간소화 뷰
     @GetMapping("/{id}/my-records")
+    @PreAuthorize("hasAnyRole('interpreter', 'admin', 'patient')")
     @Operation(summary = "이주민 본인용 기록 조회")
     public ResponseEntity<Response<List<ConsultationResponse.PatientView>>> getMyRecords(
             @PathVariable UUID id,
