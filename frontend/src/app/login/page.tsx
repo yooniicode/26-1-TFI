@@ -93,6 +93,7 @@ export default function LoginPage() {
       email,
       password: signupPassword,
       options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
         data: {
           name: name.trim(),
           app_role: role,
