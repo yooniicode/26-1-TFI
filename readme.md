@@ -62,30 +62,51 @@
 
 ## 4) 기술 스택
 
-### Backend
-
-- Java 21
-- Spring Boot 3.x
-- Spring Web, Data JPA, Validation, Security
-- JWT (`jjwt`)
-- Flyway
-- PostgreSQL
-- springdoc-openapi (Swagger UI)
-
 ### Frontend
 
-- Next.js 14
-- React 18
-- TypeScript
-- Tailwind CSS
-- Supabase JS / SSR
+| 분류 | 기술 | 버전 |
+|---|---|---|
+| 프레임워크 | Next.js (App Router) | 14.2.29 |
+| 언어 | TypeScript | 5.x |
+| UI | React | 18.3.1 |
+| 스타일링 | Tailwind CSS | 3.4 |
+| 인증 | Supabase JS + SSR | 2.49 / 0.5 |
+| PWA | @ducanh2912/next-pwa | 10.2.9 |
+| 유틸리티 | clsx | 2.1 |
+| 린터 | ESLint (eslint-config-next) | 8.x |
 
-### Infra / DevOps
+### Backend
 
-- Docker / Docker Compose
-- GitHub Actions CI/CD
-- GHCR 이미지 푸시
-- 배포 타깃: Railway 또는 EC2 (백엔드), Vercel (프론트)
+| 분류 | 기술 | 버전 |
+|---|---|---|
+| 언어 | Java | 21 |
+| 프레임워크 | Spring Boot | 3.3.5 |
+| 빌드 도구 | Gradle | - |
+| ORM | Spring Data JPA (Hibernate) | - |
+| DB 마이그레이션 | Flyway | - |
+| 인증 | Spring Security + JWT (JJWT) | 0.12.6 |
+| 인증 공급자 | Supabase (서비스 키 검증) | - |
+| HTTP 클라이언트 | Spring WebFlux RestClient | - |
+| API 문서 | SpringDoc OpenAPI (Swagger UI) | 2.6.0 |
+| 유효성 검사 | Spring Validation | - |
+| 헬스체크 | Spring Boot Actuator | - |
+| 코드 단순화 | Lombok | - |
+| DB (운영) | PostgreSQL | - |
+| DB (테스트) | H2 (in-memory) | - |
+| 테스트 | JUnit 5 + Spring Security Test | - |
+| AI | Claude API (claude-3-5-haiku) | - |
+
+### 인프라 / 배포
+
+| 분류 | 기술 | 역할 |
+|---|---|---|
+| 프론트 호스팅 | Vercel | Next.js 프로덕션 배포 |
+| 백엔드 호스팅 | Railway | Docker 컨테이너 배포 |
+| DB 호스팅 | Supabase (PostgreSQL) | 관계형 DB + 인증 |
+| 컨테이너 | Docker | 백엔드 이미지 빌드 |
+| 이미지 레지스트리 | GitHub Container Registry (GHCR) | Docker 이미지 저장 |
+| CI/CD | GitHub Actions | 테스트 → 빌드 → 배포 자동화 |
+| 소스 관리 | GitHub | - |
 
 ## 5) API 문서 (Swagger)
 
