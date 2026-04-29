@@ -142,8 +142,8 @@ export interface MedicalScript {
 export interface AuthMe {
   authUserId: string
   role: UserRole
-  name?: string
-  entityId?: string
+  name?: string | null
+  entityId?: string | null
 }
 
 export interface RegisterProfileRequest {

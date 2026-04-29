@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import AppShell from '@/components/AppShell'
 import { patientApi, interpreterApi } from '@/lib/api'
@@ -13,7 +12,6 @@ import { VISA_LABEL } from '@/lib/types'
 import Spinner from '@/components/ui/Spinner'
 
 export default function MyPage() {
-  const router = useRouter()
   const queryClient = useQueryClient()
   const { data: me, isLoading: meLoading } = useMe()
 
@@ -56,10 +54,11 @@ export default function MyPage() {
 
   const { mutate: save, isPending: saving, isSuccess, error: saveError } = useMutation<unknown, Error>({
     mutationFn: () => {
-      if (me?.role === 'patient') {
-        return patientApi.update(me.entityId!, { phone, region, workplaceName, visaType, visaNote })
+      if (!me?.entityId) return Promise.reject(new Error('프로필 정보를 불러오지 못했습니다.'))
+      if (me.role === 'patient') {
+        return patientApi.update(me.entityId, { phone, region, workplaceName, visaType, visaNote })
       }
-      return interpreterApi.update(me!.entityId!, { phone: intPhone, role: intRole })
+      return interpreterApi.update(me.entityId, { phone: intPhone, role: intRole })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.patients.detail(me?.entityId ?? '') })
@@ -69,11 +68,15 @@ export default function MyPage() {
 
   async function handleLogout() {
     await createClient().auth.signOut()
-    router.push('/login')
+    window.location.href = '/login'
   }
 
   const loading = meLoading || patientLoading || interpreterLoading
   if (loading) return <AppShell><Spinner /></AppShell>
+  if (!meLoading && me && !me.entityId) {
+    window.location.replace('/auth/complete')
+    return null
+  }
 
   return (
     <AppShell>

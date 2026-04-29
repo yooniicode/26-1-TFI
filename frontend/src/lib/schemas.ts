@@ -112,8 +112,8 @@ export const medicalScriptSchema = z.object({
 export const authMeSchema = z.object({
   authUserId: z.string(),
   role:       userRoleSchema,
-  name:       z.string().optional(),
-  entityId:   z.string().uuid().optional(),
+  name:       z.string().nullable().optional(),
+  entityId:   z.string().uuid().nullable().optional(),
 })
 
 // ─── 배열 스키마 ─────────────────────────────────────────────
