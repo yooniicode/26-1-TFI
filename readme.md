@@ -1,6 +1,5 @@
-# BYBY (이주민 의료 통번역 지원 플랫폼)
+# 이주민 의료 통번역 지원 플랫폼
 
-이 저장소는 이주민 의료 통번역 업무를 위한 풀스택 서비스입니다.  
 `frontend`(Next.js) + `backend`(Spring Boot) + `PostgreSQL` 기반으로 구성되어 있으며, Supabase 인증(JWT)과 역할 기반 접근 제어를 사용합니다.
 
 ## 1) 전체 아키텍처
