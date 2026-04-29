@@ -3,13 +3,22 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { authApi } from '@/lib/api'
+import { getRequestedMemberRole, type RequestedMemberRole } from '@/lib/authMetadata'
 import { createClient } from '@/lib/supabase'
 import type { Gender, Nationality, UserRole, VisaType } from '@/lib/types'
+
+const requestedRoleLabel = (request: RequestedMemberRole) => {
+  if (request.role === 'admin') return '센터 직원'
+  if (request.interpreterRole === 'FREELANCER') return '프리랜서'
+  if (request.interpreterRole === 'STAFF') return '센터 직원'
+  return '통번역가'
+}
 
 export default function AuthCompletePage() {
   const router = useRouter()
   const [checking, setChecking] = useState(true)
   const [needsProfile, setNeedsProfile] = useState(false)
+  const [pendingRequest, setPendingRequest] = useState<RequestedMemberRole | null>(null)
   const [isOtpUser, setIsOtpUser] = useState(false)
   const [role, setRole] = useState<Extract<UserRole, 'interpreter' | 'patient'>>('patient')
 
@@ -33,6 +42,7 @@ export default function AuthCompletePage() {
       }
 
       const metadata = session.user.user_metadata ?? {}
+      const requestedMemberRole = getRequestedMemberRole(metadata)
       if (typeof metadata.name === 'string') setName(metadata.name)
       if (typeof metadata.phone === 'string') setPhone(metadata.phone)
 
@@ -49,6 +59,11 @@ export default function AuthCompletePage() {
             return
           }
           if (res.payload.role === 'interpreter') setRole('interpreter')
+          if (res.payload.role === 'patient' && requestedMemberRole) {
+            setPendingRequest(requestedMemberRole)
+            setNeedsProfile(false)
+            return
+          }
           if (res.payload?.entityId) {
             router.replace('/dashboard')
           } else {
@@ -98,6 +113,42 @@ export default function AuthCompletePage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <p className="text-sm text-gray-500">잠시만요...</p>
+      </div>
+    )
+  }
+
+  if (pendingRequest) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="card max-w-sm w-full text-center py-8">
+          <h1 className="text-xl font-bold text-primary-700">승인 대기 중</h1>
+          <p className="text-sm text-gray-500 mt-3">
+            {requestedRoleLabel(pendingRequest)} 계정으로 가입 요청이 접수되었습니다.
+            센터 직원이 회원 관리에서 권한을 승인하면 이용할 수 있습니다.
+          </p>
+          <div className="mt-6 space-y-2">
+            <button
+              type="button"
+              className="btn-primary w-full"
+              onClick={async () => {
+                await createClient().auth.refreshSession()
+                window.location.reload()
+              }}
+            >
+              승인 상태 다시 확인
+            </button>
+            <button
+              type="button"
+              className="btn-secondary w-full"
+              onClick={async () => {
+                await createClient().auth.signOut()
+                router.replace('/login')
+              }}
+            >
+              로그아웃
+            </button>
+          </div>
+        </div>
       </div>
     )
   }

@@ -1,8 +1,10 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { getRequestedMemberRole, type RequestedMemberRole } from '@/lib/authMetadata'
 import type { UserRole } from '@/lib/types'
 import { useMe } from '@/hooks/useMe'
 import clsx from 'clsx'
@@ -20,10 +22,24 @@ const NAV: NavItem[] = [
   { href: '/my-records',    label: '내 기록',  icon: '□', roles: ['patient'] },
 ]
 
+const requestedRoleLabel = (request: RequestedMemberRole) => {
+  if (request.role === 'admin') return '센터 직원'
+  if (request.interpreterRole === 'FREELANCER') return '프리랜서'
+  if (request.interpreterRole === 'STAFF') return '센터 직원'
+  return '통번역가'
+}
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const { data: me } = useMe()
+  const [pendingRequest, setPendingRequest] = useState<RequestedMemberRole | null>(null)
+
+  useEffect(() => {
+    createClient().auth.getSession().then(({ data: { session } }) => {
+      setPendingRequest(getRequestedMemberRole(session?.user.user_metadata ?? null))
+    })
+  }, [])
 
   async function handleLogout() {
     await createClient().auth.signOut()
@@ -32,7 +48,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const visibleNav = me ? NAV.filter(n => n.roles.includes(me.role)) : []
-  const needsProfile = !!me && me.role !== 'admin' && !me.entityId && !pathname.startsWith('/auth/')
+  const needsApproval = !!me && me.role === 'patient' && !!pendingRequest && !pathname.startsWith('/auth/')
+  const needsProfile = !!me && me.role !== 'admin' && !me.entityId && !needsApproval && !pathname.startsWith('/auth/')
 
   return (
     <div className="min-h-screen flex flex-col max-w-lg mx-auto bg-white shadow-sm">
@@ -49,6 +66,35 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               className="btn-primary w-full"
             >
               정보 입력하러 가기
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="btn-secondary w-full mt-2"
+            >
+              로그아웃
+            </button>
+          </div>
+        </div>
+      )}
+      {needsApproval && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 pb-10">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <p className="text-lg mb-1">승인 대기 중</p>
+            <h2 className="text-base font-bold mb-2">
+              {pendingRequest ? requestedRoleLabel(pendingRequest) : '회원'} 권한 승인이 필요합니다
+            </h2>
+            <p className="text-sm text-gray-500 mb-5">
+              센터 직원이 회원 관리에서 권한을 승인하면 이 계정으로 이용할 수 있습니다.
+            </p>
+            <button
+              onClick={async () => {
+                await createClient().auth.refreshSession()
+                window.location.reload()
+              }}
+              className="btn-primary w-full"
+            >
+              승인 상태 다시 확인
             </button>
             <button
               type="button"

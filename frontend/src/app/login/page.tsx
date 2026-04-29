@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import type { Gender, Nationality, VisaType } from '@/lib/types'
 
+type SignupType = 'patient' | 'admin' | 'interpreter' | 'freelancer'
+
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
@@ -12,7 +14,7 @@ export default function LoginPage() {
   const [name, setName] = useState('')
   const [signupPassword, setSignupPassword] = useState('')
   const [signupPasswordConfirm, setSignupPasswordConfirm] = useState('')
-  const [accountType, setAccountType] = useState<'patient' | 'member'>('patient')
+  const [accountType, setAccountType] = useState<SignupType>('patient')
   const [nationality, setNationality] = useState<Nationality>('OTHER')
   const [gender, setGender] = useState<Gender>('OTHER')
   const [visaType, setVisaType] = useState<VisaType>('OTHER')
@@ -57,6 +59,16 @@ export default function LoginPage() {
 
     setLoading(true); setError('')
     const supabase = createClient()
+    const requestedRole = accountType === 'admin'
+      ? 'admin'
+      : accountType === 'patient'
+        ? 'patient'
+        : 'interpreter'
+    const requestedInterpreterRole = accountType === 'interpreter'
+      ? 'ACTIVIST'
+      : accountType === 'freelancer'
+        ? 'FREELANCER'
+        : undefined
     const { data, error } = await supabase.auth.signUp({
       email,
       password: signupPassword,
@@ -65,7 +77,8 @@ export default function LoginPage() {
         data: {
           name: name.trim(),
           phone,
-          requested_role: accountType === 'member' ? 'interpreter' : 'patient',
+          requested_role: requestedRole,
+          ...(requestedInterpreterRole ? { requested_interpreter_role: requestedInterpreterRole } : {}),
           ...(accountType === 'patient' ? {
             nationality,
             gender,
@@ -149,8 +162,10 @@ export default function LoginPage() {
               <div className="grid grid-cols-2 gap-2">
                 {([
                   { value: 'patient', label: '이주민', desc: '의료·법률 통번역 지원이 필요해요' },
-                  { value: 'member', label: '운영진·통번역가', desc: '센터 직원 승인 후 권한이 열려요' },
-                ] as const).map(({ value, label, desc }) => (
+                  { value: 'admin', label: '센터 직원', desc: '승인 후 회원과 배정을 관리해요' },
+                  { value: 'interpreter', label: '통번역가', desc: '승인 후 통번역 업무를 진행해요' },
+                  { value: 'freelancer', label: '프리랜서', desc: '승인 후 프리랜서로 활동해요' },
+                ] satisfies { value: SignupType; label: string; desc: string }[]).map(({ value, label, desc }) => (
                   <button
                     key={value}
                     type="button"

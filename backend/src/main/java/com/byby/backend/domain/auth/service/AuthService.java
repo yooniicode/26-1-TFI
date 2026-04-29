@@ -58,6 +58,12 @@ public class AuthService {
         UserRole effectiveRole = principal.getRole();
 
         if (effectiveRole == UserRole.patient) {
+            if (req.role() != null && req.role() != UserRole.patient) {
+                throw new GeneralException(GeneralErrorCode.FORBIDDEN, "센터 직원 승인 후 사용할 수 있는 계정입니다");
+            }
+            if (hasPendingMemberRequest(principal.getAuthUserId())) {
+                throw new GeneralException(GeneralErrorCode.FORBIDDEN, "센터 직원 승인 후 사용할 수 있는 계정입니다");
+            }
             registerPatientProfile(req, principal);
             updateSupabaseRole(principal, UserRole.patient);
             return;
@@ -191,15 +197,26 @@ public class AuthService {
         JsonNode metadata = user != null ? user.path("user_metadata") : objectMapper.createObjectNode();
         String name = interpreter != null ? interpreter.getName() : text(metadata, "name");
         String phone = interpreter != null ? interpreter.getPhone() : text(metadata, "phone");
+        Optional<UserRole> approvedRole = user != null
+                ? parseUserRole(text(user.path("app_metadata"), "app_role"))
+                : Optional.empty();
+        InterpreterRole interpreterRole = interpreter != null
+                ? interpreter.getRole()
+                : role == UserRole.interpreter
+                    ? resolveRequestedInterpreterRole(metadata).orElse(null)
+                    : null;
+        boolean approved = approvedRole.map(r -> r == role).orElse(user == null || interpreter != null);
+        boolean profileRegistered = role == UserRole.admin ? approved : interpreter != null;
         return new AuthResponse.Member(
                 authUserId,
                 email,
                 name,
                 phone,
                 role,
-                interpreter != null ? interpreter.getRole() : null,
+                interpreterRole,
                 interpreter != null ? interpreter.getId() : null,
-                interpreter != null
+                profileRegistered,
+                approved
         );
     }
 
@@ -207,10 +224,7 @@ public class AuthService {
         Optional<UserRole> appRole = parseUserRole(text(user.path("app_metadata"), "app_role"));
         if (appRole.isPresent()) return appRole.get();
 
-        JsonNode metadata = user.path("user_metadata");
-        Optional<UserRole> requestedRole = parseUserRole(text(metadata, "requested_role"));
-        if (requestedRole.isEmpty()) requestedRole = parseUserRole(text(metadata, "app_role"));
-        if (requestedRole.isEmpty()) requestedRole = parseUserRole(text(metadata, "role"));
+        Optional<UserRole> requestedRole = resolveRequestedMemberRole(user.path("user_metadata"));
         if (requestedRole.isPresent() && requestedRole.get() != UserRole.patient) {
             return requestedRole.get();
         }
@@ -218,10 +232,71 @@ public class AuthService {
         return interpreter != null ? UserRole.interpreter : UserRole.patient;
     }
 
+    private boolean hasPendingMemberRequest(UUID authUserId) {
+        return findSupabaseUser(authUserId)
+                .flatMap(user -> {
+                    Optional<UserRole> appRole = parseUserRole(text(user.path("app_metadata"), "app_role"));
+                    if (appRole.isPresent()) return Optional.<UserRole>empty();
+                    return resolveRequestedMemberRole(user.path("user_metadata"));
+                })
+                .filter(role -> role != UserRole.patient)
+                .isPresent();
+    }
+
+    private Optional<JsonNode> findSupabaseUser(UUID authUserId) {
+        if (!StringUtils.hasText(supabaseUrl) || !StringUtils.hasText(supabaseServiceKey)) {
+            return Optional.empty();
+        }
+
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(supabaseUrl + "/auth/v1/admin/users/" + authUserId))
+                    .header("Authorization", "Bearer " + supabaseServiceKey)
+                    .header("apikey", supabaseServiceKey)
+                    .GET()
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 404) return Optional.empty();
+            if (response.statusCode() >= 300) {
+                throw new GeneralException(GeneralErrorCode.INTERNAL_SERVER_ERROR, "Supabase user lookup failed");
+            }
+            return Optional.of(objectMapper.readTree(response.body()));
+        } catch (GeneralException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new GeneralException(GeneralErrorCode.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+    private Optional<UserRole> resolveRequestedMemberRole(JsonNode metadata) {
+        Optional<UserRole> requestedRole = parseUserRole(text(metadata, "requested_role"));
+        if (requestedRole.isEmpty()) requestedRole = parseUserRole(text(metadata, "app_role"));
+        if (requestedRole.isEmpty()) requestedRole = parseUserRole(text(metadata, "role"));
+        if (requestedRole.isPresent()) return requestedRole;
+        return resolveRequestedInterpreterRole(metadata).isPresent()
+                ? Optional.of(UserRole.interpreter)
+                : Optional.empty();
+    }
+
+    private Optional<InterpreterRole> resolveRequestedInterpreterRole(JsonNode metadata) {
+        Optional<InterpreterRole> requestedRole = parseInterpreterRole(text(metadata, "requested_interpreter_role"));
+        if (requestedRole.isEmpty()) requestedRole = parseInterpreterRole(text(metadata, "interpreter_role"));
+        return requestedRole;
+    }
+
     private Optional<UserRole> parseUserRole(String value) {
         if (!StringUtils.hasText(value)) return Optional.empty();
         try {
             return Optional.of(UserRole.valueOf(value.trim().toLowerCase(Locale.ROOT)));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
+    }
+
+    private Optional<InterpreterRole> parseInterpreterRole(String value) {
+        if (!StringUtils.hasText(value)) return Optional.empty();
+        try {
+            return Optional.of(InterpreterRole.valueOf(value.trim().toUpperCase(Locale.ROOT)));
         } catch (IllegalArgumentException e) {
             return Optional.empty();
         }

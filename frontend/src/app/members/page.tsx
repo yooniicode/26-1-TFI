@@ -80,8 +80,8 @@ export default function MembersPage() {
                       <p className="text-xs text-gray-400 mt-0.5">{member.email ?? member.authUserId}</p>
                       {member.phone && <p className="text-xs text-gray-400">{member.phone}</p>}
                     </div>
-                    <Badge variant={member.profileRegistered ? 'green' : 'yellow'}>
-                      {member.profileRegistered ? '프로필 있음' : '프로필 없음'}
+                    <Badge variant={member.approved ? 'green' : 'yellow'}>
+                      {member.approved ? '승인됨' : '승인 대기'}
                     </Badge>
                   </div>
 

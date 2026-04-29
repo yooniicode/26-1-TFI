@@ -160,6 +160,7 @@ export const memberSchema = z.object({
   interpreterRole: interpreterRoleSchema.nullable().optional(),
   interpreterId: z.string().uuid().nullable().optional(),
   profileRegistered: z.boolean(),
+  approved: z.boolean(),
 })
 
 // ─── 배열 스키마 ─────────────────────────────────────────────

@@ -22,6 +22,7 @@ public class AuthResponse {
             UserRole role,
             InterpreterRole interpreterRole,
             UUID interpreterId,
-            boolean profileRegistered
+            boolean profileRegistered,
+            boolean approved
     ) {}
 }

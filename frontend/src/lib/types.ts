@@ -186,6 +186,7 @@ export interface Member {
   interpreterRole?: InterpreterRole | null
   interpreterId?: string | null
   profileRegistered: boolean
+  approved: boolean
 }
 
 export interface UpdateMemberRoleRequest {
