@@ -52,10 +52,19 @@ public class ConsultationService {
                 .interpreter(interpreter)
                 .hospital(hospital)
                 .department(req.department())
+                .doctorName(req.doctorName())
                 .issueType(req.issueType())
                 .method(req.method())
                 .processing(req.processing())
                 .memo(req.memo())
+                .patientComment(req.patientComment())
+                .treatmentResult(req.treatmentResult())
+                .diagnosisContent(req.diagnosisContent())
+                .diagnosisNameCode(req.diagnosisNameCode())
+                .medicationInstruction(req.medicationInstruction())
+                .counselorName(req.counselorName())
+                .workDescription(req.workDescription())
+                .doctorConfirmationSignature(req.doctorConfirmationSignature())
                 .durationHours(req.durationHours())
                 .fee(req.fee())
                 .nextAppointmentDate(req.nextAppointmentDate())
@@ -76,9 +85,12 @@ public class ConsultationService {
         throw new GeneralException(GeneralErrorCode.FORBIDDEN);
     }
 
-    public ConsultationResponse.Detail getById(UUID id, UserPrincipal principal) {
+    public Object getById(UUID id, UserPrincipal principal) {
         Consultation c = findConsultation(id);
         checkAccess(c, principal);
+        if (principal.isPatient()) {
+            return ConsultationResponse.PatientView.from(c);
+        }
         return ConsultationResponse.Detail.from(c);
     }
 
@@ -94,6 +106,9 @@ public class ConsultationService {
             throw new BusinessException(BusinessErrorCode.ACCESS_DENIED_NOT_OWNER);
         }
         c.update(req.memo(), req.nextAppointmentDate(), req.department(),
+                req.doctorName(), req.patientComment(), req.treatmentResult(),
+                req.diagnosisContent(), req.diagnosisNameCode(), req.medicationInstruction(),
+                req.counselorName(), req.workDescription(), req.doctorConfirmationSignature(),
                 req.durationHours(), req.fee());
         return ConsultationResponse.Detail.from(c);
     }

@@ -84,15 +84,31 @@ export interface Consultation {
   consultationDate: string
   patientId: string
   patientName: string
+  patientBirthDate?: string
+  patientNationality?: Nationality
+  patientGender?: Gender
+  patientVisaType?: VisaType
+  patientWorkplaceName?: string
+  patientRegion?: string
+  patientPhone?: string
   interpreterId?: string
   interpreterName?: string
   hospitalId?: string
   hospitalName?: string
   department?: string
+  doctorName?: string
   issueType: IssueType
   method?: ConsultationMethod
   processing?: ProcessingType
   memo?: string
+  patientComment?: string
+  treatmentResult?: string
+  diagnosisContent?: string
+  diagnosisNameCode?: string
+  medicationInstruction?: string
+  counselorName?: string
+  workDescription?: string
+  doctorConfirmationSignature?: string
   durationHours?: number
   fee?: number
   nextAppointmentDate?: string
@@ -102,6 +118,20 @@ export interface Consultation {
   confirmed: boolean
   createdAt: string
   updatedAt: string
+}
+
+export interface PatientReport {
+  id: string
+  consultationDate: string
+  hospitalName?: string
+  department?: string
+  doctorName?: string
+  patientComment?: string
+  treatmentResult?: string
+  diagnosisContent?: string
+  diagnosisNameCode?: string
+  medicationInstruction?: string
+  nextAppointmentDate?: string
 }
 
 export interface Handover {

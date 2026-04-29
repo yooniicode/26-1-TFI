@@ -1,8 +1,11 @@
 package com.byby.backend.domain.consultation.dto;
 
 import com.byby.backend.common.enums.ConsultationMethod;
+import com.byby.backend.common.enums.Gender;
 import com.byby.backend.common.enums.IssueType;
+import com.byby.backend.common.enums.Nationality;
 import com.byby.backend.common.enums.ProcessingType;
+import com.byby.backend.common.enums.VisaType;
 import com.byby.backend.domain.consultation.entity.Consultation;
 
 import java.math.BigDecimal;
@@ -40,15 +43,31 @@ public class ConsultationResponse {
             LocalDate consultationDate,
             UUID patientId,
             String patientName,
+            LocalDate patientBirthDate,
+            Nationality patientNationality,
+            Gender patientGender,
+            VisaType patientVisaType,
+            String patientWorkplaceName,
+            String patientRegion,
+            String patientPhone,
             UUID interpreterId,
             String interpreterName,
             UUID hospitalId,
             String hospitalName,
             String department,
+            String doctorName,
             IssueType issueType,
             ConsultationMethod method,
             ProcessingType processing,
             String memo,
+            String patientComment,
+            String treatmentResult,
+            String diagnosisContent,
+            String diagnosisNameCode,
+            String medicationInstruction,
+            String counselorName,
+            String workDescription,
+            String doctorConfirmationSignature,
             BigDecimal durationHours,
             Integer fee,
             LocalDate nextAppointmentDate,
@@ -62,12 +81,22 @@ public class ConsultationResponse {
             return new Detail(
                     c.getId(), c.getConsultationDate(),
                     c.getPatient().getId(), c.getPatient().getName(),
+                    c.getPatient().getBirthDate(),
+                    c.getPatient().getNationality(),
+                    c.getPatient().getGender(),
+                    c.getPatient().getVisaType(),
+                    c.getPatient().getWorkplaceName(),
+                    c.getPatient().getRegion(),
+                    c.getPatient().getPhone(),
                     c.getInterpreter() != null ? c.getInterpreter().getId() : null,
                     c.getInterpreter() != null ? c.getInterpreter().getName() : null,
                     c.getHospital() != null ? c.getHospital().getId() : null,
                     c.getHospital() != null ? c.getHospital().getName() : null,
-                    c.getDepartment(), c.getIssueType(), c.getMethod(), c.getProcessing(),
-                    c.getMemo(), c.getDurationHours(), c.getFee(), c.getNextAppointmentDate(),
+                    c.getDepartment(), c.getDoctorName(), c.getIssueType(), c.getMethod(), c.getProcessing(),
+                    c.getMemo(), c.getPatientComment(), c.getTreatmentResult(),
+                    c.getDiagnosisContent(), c.getDiagnosisNameCode(),
+                    c.getMedicationInstruction(), c.getCounselorName(), c.getWorkDescription(),
+                    c.getDoctorConfirmationSignature(), c.getDurationHours(), c.getFee(), c.getNextAppointmentDate(),
                     c.getConfirmedAt(), c.getConfirmedBy(), c.getConfirmedByPhone(),
                     c.getCreatedAt(), c.getUpdatedAt());
         }
@@ -79,13 +108,21 @@ public class ConsultationResponse {
             LocalDate consultationDate,
             String hospitalName,
             String department,
+            String doctorName,
+            String patientComment,
+            String treatmentResult,
+            String diagnosisContent,
+            String diagnosisNameCode,
+            String medicationInstruction,
             LocalDate nextAppointmentDate
     ) {
         public static PatientView from(Consultation c) {
             return new PatientView(
                     c.getId(), c.getConsultationDate(),
                     c.getHospital() != null ? c.getHospital().getName() : null,
-                    c.getDepartment(), c.getNextAppointmentDate());
+                    c.getDepartment(), c.getDoctorName(), c.getPatientComment(),
+                    c.getTreatmentResult(), c.getDiagnosisContent(), c.getDiagnosisNameCode(),
+                    c.getMedicationInstruction(), c.getNextAppointmentDate());
         }
     }
 }

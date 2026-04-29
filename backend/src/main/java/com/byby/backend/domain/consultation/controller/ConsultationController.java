@@ -51,7 +51,7 @@ public class ConsultationController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('interpreter', 'admin', 'patient')")
     @Operation(summary = "상담/통역 보고서 상세 조회")
-    public ResponseEntity<Response<ConsultationResponse.Detail>> getById(
+    public ResponseEntity<Response<Object>> getById(
             @PathVariable UUID id,
             @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(

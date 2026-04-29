@@ -42,6 +42,9 @@ public class Consultation extends BaseEntity {
     @Column(length = 100)
     private String department;
 
+    @Column(length = 100)
+    private String doctorName;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private IssueType issueType;
@@ -56,6 +59,30 @@ public class Consultation extends BaseEntity {
 
     @Column(columnDefinition = "TEXT")
     private String memo;
+
+    @Column(columnDefinition = "TEXT")
+    private String patientComment;
+
+    @Column(columnDefinition = "TEXT")
+    private String treatmentResult;
+
+    @Column(columnDefinition = "TEXT")
+    private String diagnosisContent;
+
+    @Column(length = 200)
+    private String diagnosisNameCode;
+
+    @Column(columnDefinition = "TEXT")
+    private String medicationInstruction;
+
+    @Column(length = 100)
+    private String counselorName;
+
+    @Column(columnDefinition = "TEXT")
+    private String workDescription;
+
+    @Column(columnDefinition = "TEXT")
+    private String doctorConfirmationSignature;
 
     @Column(precision = 4, scale = 1)
     private BigDecimal durationHours;
@@ -76,16 +103,29 @@ public class Consultation extends BaseEntity {
     public Consultation(LocalDate consultationDate, Patient patient, Interpreter interpreter,
                         Hospital hospital, String department, IssueType issueType,
                         ConsultationMethod method, ProcessingType processing, String memo,
+                        String doctorName, String patientComment, String treatmentResult,
+                        String diagnosisContent, String diagnosisNameCode,
+                        String medicationInstruction, String counselorName,
+                        String workDescription, String doctorConfirmationSignature,
                         BigDecimal durationHours, Integer fee, LocalDate nextAppointmentDate) {
         this.consultationDate = consultationDate;
         this.patient = patient;
         this.interpreter = interpreter;
         this.hospital = hospital;
         this.department = department;
+        this.doctorName = doctorName;
         this.issueType = issueType;
         this.method = method;
         this.processing = processing;
         this.memo = memo;
+        this.patientComment = patientComment;
+        this.treatmentResult = treatmentResult;
+        this.diagnosisContent = diagnosisContent;
+        this.diagnosisNameCode = diagnosisNameCode;
+        this.medicationInstruction = medicationInstruction;
+        this.counselorName = counselorName;
+        this.workDescription = workDescription;
+        this.doctorConfirmationSignature = doctorConfirmationSignature;
         this.durationHours = durationHours;
         this.fee = fee;
         this.nextAppointmentDate = nextAppointmentDate;
@@ -98,10 +138,23 @@ public class Consultation extends BaseEntity {
     }
 
     public void update(String memo, LocalDate nextAppointmentDate, String department,
+                       String doctorName, String patientComment, String treatmentResult,
+                       String diagnosisContent, String diagnosisNameCode,
+                       String medicationInstruction, String counselorName,
+                       String workDescription, String doctorConfirmationSignature,
                        BigDecimal durationHours, Integer fee) {
         if (memo != null) this.memo = memo;
         if (nextAppointmentDate != null) this.nextAppointmentDate = nextAppointmentDate;
         if (department != null) this.department = department;
+        if (doctorName != null) this.doctorName = doctorName;
+        if (patientComment != null) this.patientComment = patientComment;
+        if (treatmentResult != null) this.treatmentResult = treatmentResult;
+        if (diagnosisContent != null) this.diagnosisContent = diagnosisContent;
+        if (diagnosisNameCode != null) this.diagnosisNameCode = diagnosisNameCode;
+        if (medicationInstruction != null) this.medicationInstruction = medicationInstruction;
+        if (counselorName != null) this.counselorName = counselorName;
+        if (workDescription != null) this.workDescription = workDescription;
+        if (doctorConfirmationSignature != null) this.doctorConfirmationSignature = doctorConfirmationSignature;
         if (durationHours != null) this.durationHours = durationHours;
         if (fee != null) this.fee = fee;
     }

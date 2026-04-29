@@ -15,5 +15,5 @@ export const patientApi = {
   history:   (id: string, page = 0) =>
     get(`/patients/${id}/history?page=${page}&size=20`, schemas.consultations),
   myRecords: (id: string, page = 0) =>
-    get(`/patients/${id}/my-records?page=${page}&size=20`, schemas.consultations),
+    get(`/patients/${id}/my-records?page=${page}&size=20`, schemas.patientReports),
 }
