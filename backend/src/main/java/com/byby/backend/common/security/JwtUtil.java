@@ -127,7 +127,7 @@ public class JwtUtil {
 
         try {
             keys.add(Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret)));
-        } catch (IllegalArgumentException | WeakKeyException e) {
+        } catch (IllegalArgumentException | WeakKeyException | io.jsonwebtoken.io.DecodingException e) {
             log.debug("JWT secret is not usable as a Base64-decoded fallback key: {}", e.getMessage());
         }
 
