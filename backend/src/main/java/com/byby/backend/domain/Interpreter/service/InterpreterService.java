@@ -5,6 +5,7 @@ import com.byby.backend.common.exception.GeneralException;
 import com.byby.backend.common.response.code.BusinessErrorCode;
 import com.byby.backend.common.response.code.GeneralErrorCode;
 import com.byby.backend.common.security.UserPrincipal;
+import com.byby.backend.domain.auth.service.AuthService;
 import com.byby.backend.domain.interpreter.dto.InterpreterRequest;
 import com.byby.backend.domain.interpreter.dto.InterpreterResponse;
 import com.byby.backend.domain.interpreter.entity.Interpreter;
@@ -23,6 +24,7 @@ import java.util.UUID;
 public class InterpreterService {
 
     private final InterpreterRepository interpreterRepository;
+    private final AuthService authService;
 
     @Transactional
     public InterpreterResponse.Detail create(InterpreterRequest.Create req, UserPrincipal principal) {
@@ -40,8 +42,10 @@ public class InterpreterService {
         return InterpreterResponse.Detail.from(interpreterRepository.save(interpreter));
     }
 
+    @Transactional
     public Page<InterpreterResponse.Summary> getAll(String query, Pageable pageable, UserPrincipal principal) {
         if (!principal.isAdmin()) throw new GeneralException(GeneralErrorCode.FORBIDDEN);
+        authService.syncApprovedInterpreterProfiles();
         return interpreterRepository.search(query, pageable).map(InterpreterResponse.Summary::from);
     }
 

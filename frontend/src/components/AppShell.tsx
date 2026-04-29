@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { authApi } from '@/lib/api'
 import { getRequestedMemberRole, type RequestedMemberRole } from '@/lib/authMetadata'
 import type { UserRole } from '@/lib/types'
 import { useMe } from '@/hooks/useMe'
@@ -34,6 +35,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const { data: me } = useMe()
   const [pendingRequest, setPendingRequest] = useState<RequestedMemberRole | null>(null)
+  const [bootstrapLoading, setBootstrapLoading] = useState(false)
+  const [bootstrapError, setBootstrapError] = useState('')
 
   useEffect(() => {
     createClient().auth.getSession().then(({ data: { session } }) => {
@@ -45,6 +48,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     await createClient().auth.signOut()
     router.replace('/login')
     router.refresh()
+  }
+
+  async function handleBootstrapAdmin() {
+    setBootstrapLoading(true)
+    setBootstrapError('')
+    try {
+      await authApi.bootstrapAdmin()
+      await createClient().auth.refreshSession()
+      router.replace('/dashboard')
+      router.refresh()
+    } catch (e) {
+      setBootstrapError(e instanceof Error ? e.message : '최초 센터 직원 계정 생성에 실패했습니다.')
+      setBootstrapLoading(false)
+    }
   }
 
   const visibleNav = me ? NAV.filter(n => n.roles.includes(me.role)) : []
@@ -87,12 +104,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <p className="text-sm text-gray-500 mb-5">
               센터 직원이 회원 관리에서 권한을 승인하면 이 계정으로 이용할 수 있습니다.
             </p>
+            {pendingRequest?.role === 'admin' && (
+              <button
+                type="button"
+                onClick={handleBootstrapAdmin}
+                disabled={bootstrapLoading}
+                className="btn-primary w-full mb-2"
+              >
+                {bootstrapLoading ? '확인 중...' : '최초 센터 직원 계정 만들기'}
+              </button>
+            )}
             <button
               onClick={async () => {
                 await createClient().auth.refreshSession()
                 window.location.reload()
               }}
-              className="btn-primary w-full"
+              disabled={bootstrapLoading}
+              className={pendingRequest?.role === 'admin' ? 'btn-secondary w-full' : 'btn-primary w-full'}
             >
               승인 상태 다시 확인
             </button>
@@ -103,6 +131,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             >
               로그아웃
             </button>
+            {bootstrapError && <p className="text-xs text-red-500 mt-3">{bootstrapError}</p>}
           </div>
         </div>
       )}

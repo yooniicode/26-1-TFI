@@ -23,11 +23,14 @@ public interface InterpreterRepository extends JpaRepository<Interpreter, UUID> 
     @Query("""
             SELECT DISTINCT i FROM Interpreter i
             LEFT JOIN i.languages language
-            WHERE :query IS NULL
-               OR :query = ''
-               OR LOWER(i.name) LIKE LOWER(CONCAT('%', :query, '%'))
-               OR LOWER(COALESCE(i.phone, '')) LIKE LOWER(CONCAT('%', :query, '%'))
-               OR LOWER(COALESCE(language, '')) LIKE LOWER(CONCAT('%', :query, '%'))
+            WHERE i.active = true
+              AND (
+                  :query IS NULL
+                  OR :query = ''
+                  OR LOWER(i.name) LIKE LOWER(CONCAT('%', :query, '%'))
+                  OR LOWER(COALESCE(i.phone, '')) LIKE LOWER(CONCAT('%', :query, '%'))
+                  OR LOWER(COALESCE(language, '')) LIKE LOWER(CONCAT('%', :query, '%'))
+              )
             """)
     Page<Interpreter> search(@Param("query") String query, Pageable pageable);
 }

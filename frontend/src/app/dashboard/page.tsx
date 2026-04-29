@@ -13,14 +13,15 @@ import Badge from '@/components/ui/Badge'
 
 export default function DashboardPage() {
   const { data: me, isLoading: meLoading } = useMe()
+  const canViewConsultations = me?.role === 'admin' || me?.role === 'interpreter'
 
   const { data: consultations, isLoading: listLoading } = useQuery({
     queryKey: queryKeys.consultations.list(0),
     queryFn: () => consultationApi.list(0).then(r => (r.payload ?? []) as Consultation[]),
-    enabled: !!me,
+    enabled: canViewConsultations,
   })
 
-  if (meLoading || listLoading) return <AppShell><Spinner /></AppShell>
+  if (meLoading || (canViewConsultations && listLoading)) return <AppShell><Spinner /></AppShell>
 
   const recent = (consultations ?? []).slice(0, 5)
 
@@ -79,7 +80,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {me?.role !== 'patient' && (
+        {canViewConsultations && (
           <section>
             <div className="flex justify-between items-center mb-3">
               <h2 className="font-semibold">최근 보고서</h2>

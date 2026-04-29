@@ -109,6 +109,20 @@ export default function AuthCompletePage() {
     }
   }
 
+  async function handleBootstrapAdmin() {
+    setLoading(true)
+    setError('')
+    try {
+      await authApi.bootstrapAdmin()
+      await createClient().auth.refreshSession()
+      router.replace('/dashboard')
+      router.refresh()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '최초 센터 직원 계정 생성에 실패했습니다.')
+      setLoading(false)
+    }
+  }
+
   if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -127,9 +141,20 @@ export default function AuthCompletePage() {
             센터 직원이 회원 관리에서 권한을 승인하면 이용할 수 있습니다.
           </p>
           <div className="mt-6 space-y-2">
+            {pendingRequest.role === 'admin' && (
+              <button
+                type="button"
+                className="btn-primary w-full"
+                disabled={loading}
+                onClick={handleBootstrapAdmin}
+              >
+                {loading ? '확인 중...' : '최초 센터 직원 계정 만들기'}
+              </button>
+            )}
             <button
               type="button"
-              className="btn-primary w-full"
+              className={pendingRequest.role === 'admin' ? 'btn-secondary w-full' : 'btn-primary w-full'}
+              disabled={loading}
               onClick={async () => {
                 await createClient().auth.refreshSession()
                 window.location.reload()
@@ -148,6 +173,7 @@ export default function AuthCompletePage() {
               로그아웃
             </button>
           </div>
+          {error && <p className="text-xs text-red-500 mt-4">{error}</p>}
         </div>
       </div>
     )

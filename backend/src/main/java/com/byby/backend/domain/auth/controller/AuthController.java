@@ -94,6 +94,13 @@ public class AuthController {
         return ResponseEntity.status(201).body(Response.success(SuccessCode.CREATED));
     }
 
+    @PostMapping("/bootstrap-admin")
+    @Operation(summary = "최초 센터 직원 계정 생성", description = "승인 가능한 센터 직원이 아직 없을 때 현재 로그인 사용자를 최초 센터 직원으로 승격합니다.")
+    public ResponseEntity<Response<AuthResponse.Me>> bootstrapAdmin(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(Response.success(SuccessCode.OK, authService.bootstrapAdmin(principal)));
+    }
+
     @GetMapping("/members")
     @PreAuthorize("hasRole('admin')")
     @Operation(summary = "비이주민 회원 목록 조회")

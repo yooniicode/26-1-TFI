@@ -81,7 +81,17 @@ public class AuthService {
     }
 
     private void updateSupabaseRole(UUID authUserId, UserRole role) {
-        if (!StringUtils.hasText(supabaseUrl) || !StringUtils.hasText(supabaseServiceKey)) return;
+        tryUpdateSupabaseRole(authUserId, role);
+    }
+
+    private void updateSupabaseRoleOrThrow(UUID authUserId, UserRole role) {
+        if (!tryUpdateSupabaseRole(authUserId, role)) {
+            throw new GeneralException(GeneralErrorCode.INTERNAL_SERVER_ERROR, "Supabase user role update failed");
+        }
+    }
+
+    private boolean tryUpdateSupabaseRole(UUID authUserId, UserRole role) {
+        if (!StringUtils.hasText(supabaseUrl) || !StringUtils.hasText(supabaseServiceKey)) return false;
         try {
             String body = objectMapper.writeValueAsString(
                     Map.of("app_metadata", Map.of("app_role", role.name())));
@@ -95,12 +105,52 @@ public class AuthService {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() >= 300) {
                 log.warn("Supabase role update failed [{}]: {}", response.statusCode(), response.body());
+                return false;
             }
+            return true;
         } catch (Exception e) {
             log.warn("Failed to update Supabase user role: {}", e.getMessage());
+            return false;
         }
     }
 
+    public AuthResponse.Me bootstrapAdmin(UserPrincipal principal) {
+        if (principal == null) throw new GeneralException(GeneralErrorCode.UNAUTHORIZED);
+        if (!StringUtils.hasText(supabaseUrl) || !StringUtils.hasText(supabaseServiceKey)) {
+            throw new GeneralException(GeneralErrorCode.INTERNAL_SERVER_ERROR, "Supabase service key is required");
+        }
+        if (hasApprovedAdmin()) {
+            throw new GeneralException(GeneralErrorCode.FORBIDDEN, "이미 센터 직원 계정이 있습니다");
+        }
+
+        updateSupabaseRoleOrThrow(principal.getAuthUserId(), UserRole.admin);
+        return new AuthResponse.Me(principal.getAuthUserId(), UserRole.admin, "관리자", null);
+    }
+
+    @Transactional
+    public void syncApprovedInterpreterProfiles() {
+        if (!StringUtils.hasText(supabaseUrl) || !StringUtils.hasText(supabaseServiceKey)) return;
+
+        try {
+            Map<UUID, Interpreter> interpretersByAuthId = interpreterRepository.findAll().stream()
+                    .collect(Collectors.toMap(Interpreter::getAuthUserId, Function.identity(), (a, b) -> a));
+
+            for (JsonNode user : listSupabaseUsers()) {
+                UUID authUserId = UUID.fromString(user.path("id").asText());
+                Interpreter interpreter = interpretersByAuthId.get(authUserId);
+                Optional<UserRole> approvedRole = parseUserRole(text(user.path("app_metadata"), "app_role"));
+                if (approvedRole.filter(UserRole.interpreter::equals).isPresent()) {
+                    ensureInterpreterProfile(authUserId, user, user.path("email").asText(null), interpreter);
+                } else if (approvedRole.filter(UserRole.admin::equals).isPresent() && interpreter != null) {
+                    interpreter.deactivate();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to sync approved interpreter profiles: {}", e.getMessage());
+        }
+    }
+
+    @Transactional
     public List<AuthResponse.Member> getNonPatientMembers(UserPrincipal principal) {
         requireAdmin(principal);
 
@@ -114,31 +164,27 @@ public class AuthService {
         }
 
         try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(supabaseUrl + "/auth/v1/admin/users?per_page=1000"))
-                    .header("Authorization", "Bearer " + supabaseServiceKey)
-                    .header("apikey", supabaseServiceKey)
-                    .GET()
-                    .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() >= 300) {
-                throw new GeneralException(GeneralErrorCode.INTERNAL_SERVER_ERROR, "Supabase user list failed");
-            }
-
-            JsonNode root = objectMapper.readTree(response.body());
-            JsonNode users = root.has("users") ? root.get("users") : root;
+            List<JsonNode> users = listSupabaseUsers();
             List<AuthResponse.Member> members = new ArrayList<>();
             Map<UUID, AuthResponse.Member> byId = new HashMap<>();
-            if (users.isArray()) {
-                for (JsonNode user : users) {
-                    UUID authUserId = UUID.fromString(user.path("id").asText());
-                    Interpreter interpreter = interpretersByAuthId.get(authUserId);
-                    UserRole role = resolveMemberRole(user, interpreter);
-                    if (role == UserRole.patient) continue;
-                    AuthResponse.Member member = toMember(user, user.path("email").asText(null), authUserId, role, interpreter);
-                    members.add(member);
-                    byId.put(authUserId, member);
+            for (JsonNode user : users) {
+                UUID authUserId = UUID.fromString(user.path("id").asText());
+                String email = user.path("email").asText(null);
+                Interpreter interpreter = interpretersByAuthId.get(authUserId);
+                UserRole role = resolveMemberRole(user, interpreter);
+                Optional<UserRole> approvedRole = parseUserRole(text(user.path("app_metadata"), "app_role"));
+
+                if (approvedRole.filter(UserRole.interpreter::equals).isPresent()) {
+                    interpreter = ensureInterpreterProfile(authUserId, user, email, interpreter);
+                    interpretersByAuthId.put(authUserId, interpreter);
+                } else if (approvedRole.filter(UserRole.admin::equals).isPresent() && interpreter != null) {
+                    interpreter.deactivate();
                 }
+
+                if (role == UserRole.patient) continue;
+                AuthResponse.Member member = toMember(user, email, authUserId, role, interpreter);
+                members.add(member);
+                byId.put(authUserId, member);
             }
             interpretersByAuthId.values().stream()
                     .filter(i -> !byId.containsKey(i.getAuthUserId()))
@@ -162,27 +208,16 @@ public class AuthService {
             throw new GeneralException(GeneralErrorCode.BAD_REQUEST, "You cannot remove your own center-staff role");
         }
 
-        updateSupabaseRole(authUserId, req.role());
+        updateSupabaseRoleOrThrow(authUserId, req.role());
 
         Optional<Interpreter> interpreter = interpreterRepository.findByAuthUserId(authUserId);
         Interpreter saved = interpreter.orElse(null);
         if (req.role() == UserRole.interpreter) {
             InterpreterRole interpreterRole = req.interpreterRole() != null ? req.interpreterRole() : InterpreterRole.FREELANCER;
-            if (saved == null) {
-                if (!StringUtils.hasText(req.name())) {
-                    throw new GeneralException(GeneralErrorCode.BAD_REQUEST, "name is required when creating an interpreter profile");
-                }
-                saved = interpreterRepository.save(Interpreter.builder()
-                        .authUserId(authUserId)
-                        .name(req.name().trim())
-                        .phone(trimToNull(req.phone()))
-                        .role(interpreterRole)
-                        .build());
-            } else {
-                saved.updateAdminInfo(trimToNull(req.name()), trimToNull(req.phone()), interpreterRole);
-            }
+            saved = upsertInterpreterProfile(authUserId, trimToNull(req.name()), trimToNull(req.phone()), interpreterRole, saved);
         } else if (saved != null) {
             saved.updateAdminInfo(trimToNull(req.name()), trimToNull(req.phone()), InterpreterRole.STAFF);
+            saved.deactivate();
         }
 
         return toMember(null, null, authUserId, req.role(), saved);
@@ -191,6 +226,65 @@ public class AuthService {
     private void requireAdmin(UserPrincipal principal) {
         if (principal == null) throw new GeneralException(GeneralErrorCode.UNAUTHORIZED);
         if (!principal.isAdmin()) throw new GeneralException(GeneralErrorCode.FORBIDDEN);
+    }
+
+    private boolean hasApprovedAdmin() {
+        return listSupabaseUsers().stream()
+                .map(user -> parseUserRole(text(user.path("app_metadata"), "app_role")))
+                .anyMatch(role -> role.filter(UserRole.admin::equals).isPresent());
+    }
+
+    private List<JsonNode> listSupabaseUsers() {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(supabaseUrl + "/auth/v1/admin/users?per_page=1000"))
+                    .header("Authorization", "Bearer " + supabaseServiceKey)
+                    .header("apikey", supabaseServiceKey)
+                    .GET()
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 300) {
+                throw new GeneralException(GeneralErrorCode.INTERNAL_SERVER_ERROR, "Supabase user list failed");
+            }
+
+            JsonNode root = objectMapper.readTree(response.body());
+            JsonNode users = root.has("users") ? root.get("users") : root;
+            List<JsonNode> result = new ArrayList<>();
+            if (users.isArray()) users.forEach(result::add);
+            return result;
+        } catch (GeneralException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new GeneralException(GeneralErrorCode.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+    private Interpreter ensureInterpreterProfile(UUID authUserId, JsonNode user, String email, Interpreter interpreter) {
+        JsonNode metadata = user.path("user_metadata");
+        String name = text(metadata, "name");
+        if (!StringUtils.hasText(name)) name = emailName(email);
+        if (!StringUtils.hasText(name)) name = authUserId.toString();
+        String phone = text(metadata, "phone");
+        InterpreterRole role = resolveRequestedInterpreterRole(metadata).orElse(InterpreterRole.ACTIVIST);
+        return upsertInterpreterProfile(authUserId, name, phone, role, interpreter);
+    }
+
+    private Interpreter upsertInterpreterProfile(UUID authUserId, String name, String phone,
+                                                 InterpreterRole role, Interpreter existing) {
+        if (existing == null) {
+            if (!StringUtils.hasText(name)) {
+                throw new GeneralException(GeneralErrorCode.BAD_REQUEST, "name is required when creating an interpreter profile");
+            }
+            return interpreterRepository.save(Interpreter.builder()
+                    .authUserId(authUserId)
+                    .name(name.trim())
+                    .phone(trimToNull(phone))
+                    .role(role)
+                    .build());
+        }
+        existing.updateAdminInfo(trimToNull(name), trimToNull(phone), role);
+        existing.activate();
+        return existing;
     }
 
     private AuthResponse.Member toMember(JsonNode user, String email, UUID authUserId, UserRole role, Interpreter interpreter) {
@@ -309,6 +403,12 @@ public class AuthService {
 
     private String trimToNull(String value) {
         return StringUtils.hasText(value) ? value.trim() : null;
+    }
+
+    private String emailName(String email) {
+        if (!StringUtils.hasText(email)) return null;
+        int at = email.indexOf('@');
+        return at > 0 ? email.substring(0, at) : email;
     }
 
     private void registerPatientProfile(AuthRequest.RegisterProfile req, UserPrincipal principal) {

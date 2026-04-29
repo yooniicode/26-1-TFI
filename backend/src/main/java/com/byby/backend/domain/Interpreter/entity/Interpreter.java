@@ -64,4 +64,8 @@ public class Interpreter extends BaseEntity {
     public void deactivate() {
         this.active = false;
     }
+
+    public void activate() {
+        this.active = true;
+    }
 }

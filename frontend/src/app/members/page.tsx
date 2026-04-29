@@ -8,12 +8,14 @@ import EmptyState from '@/components/ui/EmptyState'
 import Spinner from '@/components/ui/Spinner'
 import { authApi } from '@/lib/api'
 import { queryKeys } from '@/lib/queryKeys'
-import type { InterpreterRole, Member, UpdateMemberRoleRequest, UserRole } from '@/lib/types'
-import { INTERPRETER_ROLE_LABEL } from '@/lib/types'
+import type { Member, UpdateMemberRoleRequest } from '@/lib/types'
 
-const roleLabels: Record<Extract<UserRole, 'admin' | 'interpreter'>, string> = {
+type MemberRoleOption = 'admin' | 'activist' | 'freelancer'
+
+const roleLabels: Record<MemberRoleOption, string> = {
   admin: '센터 직원',
-  interpreter: '통번역가',
+  activist: '통번역가',
+  freelancer: '프리랜서',
 }
 
 export default function MembersPage() {
@@ -38,10 +40,21 @@ export default function MembersPage() {
   function draftFor(member: Member): UpdateMemberRoleRequest {
     return editing[member.authUserId] ?? {
       role: member.role,
-      interpreterRole: member.interpreterRole ?? 'FREELANCER',
+      interpreterRole: member.interpreterRole ?? 'ACTIVIST',
       name: member.name ?? '',
       phone: member.phone ?? '',
     }
+  }
+
+  function roleValue(draft: UpdateMemberRoleRequest): MemberRoleOption {
+    if (draft.role === 'admin') return 'admin'
+    return draft.interpreterRole === 'FREELANCER' ? 'freelancer' : 'activist'
+  }
+
+  function rolePatch(value: MemberRoleOption): Pick<UpdateMemberRoleRequest, 'role' | 'interpreterRole'> {
+    if (value === 'admin') return { role: 'admin', interpreterRole: 'STAFF' }
+    if (value === 'freelancer') return { role: 'interpreter', interpreterRole: 'FREELANCER' }
+    return { role: 'interpreter', interpreterRole: 'ACTIVIST' }
   }
 
   function updateDraft(member: Member, patch: Partial<UpdateMemberRoleRequest>) {
@@ -71,7 +84,6 @@ export default function MembersPage() {
           <div className="space-y-3">
             {members.map(member => {
               const draft = draftFor(member)
-              const isInterpreter = draft.role === 'interpreter'
               return (
                 <div key={member.authUserId} className="card space-y-3">
                   <div className="flex items-start justify-between gap-3">
@@ -102,34 +114,17 @@ export default function MembersPage() {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="label">권한</label>
-                      <select
-                        className="input"
-                        value={draft.role}
-                        onChange={e => updateDraft(member, {
-                          role: e.target.value as Extract<UserRole, 'admin' | 'interpreter'>,
-                        })}
-                      >
-                        <option value="admin">{roleLabels.admin}</option>
-                        <option value="interpreter">{roleLabels.interpreter}</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="label">통번역가 구분</label>
-                      <select
-                        className="input"
-                        value={draft.interpreterRole ?? 'FREELANCER'}
-                        onChange={e => updateDraft(member, { interpreterRole: e.target.value as InterpreterRole })}
-                        disabled={!isInterpreter}
-                      >
-                        {(Object.entries(INTERPRETER_ROLE_LABEL) as [InterpreterRole, string][]).map(([value, label]) => (
-                          <option key={value} value={value}>{label}</option>
-                        ))}
-                      </select>
-                    </div>
+                  <div>
+                    <label className="label">역할</label>
+                    <select
+                      className="input"
+                      value={roleValue(draft)}
+                      onChange={e => updateDraft(member, rolePatch(e.target.value as MemberRoleOption))}
+                    >
+                      {(Object.entries(roleLabels) as [MemberRoleOption, string][]).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
                   </div>
 
                   <button
