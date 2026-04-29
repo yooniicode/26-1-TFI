@@ -33,13 +33,47 @@ public class AuthController {
     public ResponseEntity<Response<AuthResponse.Me>> me(
             @AuthenticationPrincipal UserPrincipal principal) {
         if (principal == null) throw new GeneralException(GeneralErrorCode.UNAUTHORIZED);
-        String name = resolveName(principal);
-        java.util.UUID entityId = resolveEntityId(principal);
+        if (principal.getRole() == com.byby.backend.common.enums.UserRole.admin) {
+            return ResponseEntity.ok(Response.success(SuccessCode.OK,
+                    new AuthResponse.Me(principal.getAuthUserId(), com.byby.backend.common.enums.UserRole.admin, "관리자", null)));
+        }
+
+        // JWT role에 맞는 테이블을 먼저 확인, 없으면 반대 테이블 fallback
+        if (principal.getRole() == com.byby.backend.common.enums.UserRole.interpreter) {
+            var interpreter = interpreterRepository.findByAuthUserId(principal.getAuthUserId());
+            if (interpreter.isPresent()) {
+                var i = interpreter.get();
+                return ResponseEntity.ok(Response.success(SuccessCode.OK,
+                        new AuthResponse.Me(principal.getAuthUserId(), com.byby.backend.common.enums.UserRole.interpreter, i.getName(), i.getId())));
+            }
+            // Supabase 역할 동기화 지연 시 patient 테이블 확인
+            var patient = patientRepository.findByAuthUserId(principal.getAuthUserId());
+            if (patient.isPresent()) {
+                var p = patient.get();
+                return ResponseEntity.ok(Response.success(SuccessCode.OK,
+                        new AuthResponse.Me(principal.getAuthUserId(), com.byby.backend.common.enums.UserRole.patient, p.getName(), p.getId())));
+            }
+        } else {
+            var patient = patientRepository.findByAuthUserId(principal.getAuthUserId());
+            if (patient.isPresent()) {
+                var p = patient.get();
+                return ResponseEntity.ok(Response.success(SuccessCode.OK,
+                        new AuthResponse.Me(principal.getAuthUserId(), com.byby.backend.common.enums.UserRole.patient, p.getName(), p.getId())));
+            }
+            // Supabase 역할 동기화 지연 시 interpreter 테이블 확인
+            var interpreter = interpreterRepository.findByAuthUserId(principal.getAuthUserId());
+            if (interpreter.isPresent()) {
+                var i = interpreter.get();
+                return ResponseEntity.ok(Response.success(SuccessCode.OK,
+                        new AuthResponse.Me(principal.getAuthUserId(), com.byby.backend.common.enums.UserRole.interpreter, i.getName(), i.getId())));
+            }
+        }
+
+        // 프로필 미등록
         return ResponseEntity.ok(Response.success(SuccessCode.OK,
-                new AuthResponse.Me(principal.getAuthUserId(), principal.getRole(), name, entityId)));
+                new AuthResponse.Me(principal.getAuthUserId(), principal.getRole(), null, null)));
     }
 
-    // Supabase JWT 검증 후 app_role 클레임 확인용 (개발/디버깅)
     @PostMapping("/verify")
     @Operation(summary = "토큰 검증 (개발/디버깅)")
     public ResponseEntity<Response<AuthResponse.Me>> verify(
@@ -54,21 +88,5 @@ public class AuthController {
             @AuthenticationPrincipal UserPrincipal principal) {
         authService.registerProfile(req, principal);
         return ResponseEntity.status(201).body(Response.success(SuccessCode.CREATED));
-    }
-
-    private String resolveName(UserPrincipal principal) {
-        if (principal.getRole() == com.byby.backend.common.enums.UserRole.admin) return "관리자";
-        return interpreterRepository.findByAuthUserId(principal.getAuthUserId())
-                .map(i -> i.getName())
-                .or(() -> patientRepository.findByAuthUserId(principal.getAuthUserId()).map(p -> p.getName()))
-                .orElse(null);
-    }
-
-    private java.util.UUID resolveEntityId(UserPrincipal principal) {
-        if (principal.getRole() == com.byby.backend.common.enums.UserRole.admin) return null;
-        return interpreterRepository.findByAuthUserId(principal.getAuthUserId())
-                .map(i -> i.getId())
-                .or(() -> patientRepository.findByAuthUserId(principal.getAuthUserId()).map(p -> p.getId()))
-                .orElse(null);
     }
 }

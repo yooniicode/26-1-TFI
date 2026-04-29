@@ -7,6 +7,10 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:byby}
     password: ${SPRING_DATASOURCE_PASSWORD:byby123}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      data-source-properties:
+        sslmode: require
+        sslrootcert: system
 
   jpa:
     hibernate:
