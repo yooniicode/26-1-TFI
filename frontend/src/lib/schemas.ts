@@ -16,17 +16,19 @@ export const scriptTypeSchema      = z.enum(['GENERAL','EMERGENCY'])
 export const userRoleSchema        = z.enum(['admin','interpreter','patient'])
 
 // ─── 엔티티 ─────────────────────────────────────────────────
+const nullableString = z.string().nullable().optional().transform(v => v ?? undefined)
+
 export const patientSchema = z.object({
   id:            z.string().uuid(),
   name:          z.string(),
   nationality:   nationalitySchema,
   gender:        genderSchema,
   visaType:      visaTypeSchema,
-  visaNote:      z.string().optional(),
-  birthDate:     z.string().optional(),
-  phone:         z.string().optional(),
-  region:        z.string().optional(),
-  workplaceName: z.string().optional(),
+  visaNote:      nullableString,
+  birthDate:     nullableString,
+  phone:         nullableString,
+  region:        nullableString,
+  workplaceName: nullableString,
   createdAt:     z.string(),
   updatedAt:     z.string(),
 })

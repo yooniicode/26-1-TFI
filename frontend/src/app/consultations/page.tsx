@@ -16,11 +16,13 @@ export default function ConsultationsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([authApi.me(), consultationApi.list(0)])
-      .then(([meRes, cRes]) => {
+    authApi.me()
+      .then(meRes => {
         setMe(meRes.payload)
-        setItems(cRes.payload ?? [])
+        return consultationApi.list(0)
       })
+      .then(cRes => setItems(cRes.payload ?? []))
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 

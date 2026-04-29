@@ -148,6 +148,7 @@ export interface AuthMe {
 
 export interface RegisterProfileRequest {
   name: string
+  role?: Extract<UserRole, 'interpreter' | 'patient'>
   nationality?: Nationality
   gender?: Gender
   visaType?: VisaType
