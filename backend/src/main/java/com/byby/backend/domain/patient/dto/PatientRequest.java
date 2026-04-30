@@ -26,6 +26,7 @@ public class PatientRequest {
     ) {}
 
     public record Update(
+            String name,
             VisaType visaType,
             String visaNote,
             String phone,

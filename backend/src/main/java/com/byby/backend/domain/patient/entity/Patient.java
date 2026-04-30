@@ -68,7 +68,8 @@ public class Patient extends BaseEntity {
         this.region = region;
     }
 
-    public void updateInfo(String phone, String region, String visaNote, VisaType visaType) {
+    public void updateInfo(String name, String phone, String region, String visaNote, VisaType visaType) {
+        if (name != null) this.name = name;
         if (phone != null) this.phone = phone;
         if (region != null) this.region = region;
         if (visaNote != null) this.visaNote = visaNote;

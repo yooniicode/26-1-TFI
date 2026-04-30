@@ -86,12 +86,16 @@ public class PatientService {
     @Transactional
     public PatientResponse.Detail update(UUID id, PatientRequest.Update req, UserPrincipal principal) {
         Patient patient = findPatient(id);
+        
+        // admin is allowed to update any patient
         if (!principal.isAdmin()) {
+            // Check if patient updates themselves
             if (!principal.isPatient() || !principal.getAuthUserId().equals(patient.getAuthUserId())) {
                 throw new GeneralException(GeneralErrorCode.FORBIDDEN);
             }
         }
-        patient.updateInfo(req.phone(), req.region(), req.visaNote(), req.visaType());
+        
+        patient.updateInfo(req.name(), req.phone(), req.region(), req.visaNote(), req.visaType());
         return PatientResponse.Detail.from(patient);
     }
 

@@ -20,6 +20,7 @@ public class InterpreterRequest {
     ) {}
 
     public record Update(
+            String name,
             String phone,
             InterpreterRole role
     ) {}
