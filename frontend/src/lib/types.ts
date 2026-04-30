@@ -195,6 +195,10 @@ export interface AuthMe {
   nickname?: string | null
 }
 
+export interface EmailExists {
+  exists: boolean
+}
+
 export interface Member {
   authUserId: string
   email?: string | null

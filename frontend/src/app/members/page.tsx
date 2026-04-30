@@ -10,19 +10,21 @@ import { authApi } from '@/lib/api'
 import { queryKeys } from '@/lib/queryKeys'
 import type { Member, UpdateMemberRoleRequest } from '@/lib/types'
 import { useMe } from '@/hooks/useMe'
+import { useTranslation } from '@/lib/i18n/I18nContext'
 
 type MemberRoleOption = 'admin' | 'activist' | 'freelancer'
 
-const roleLabels: Record<MemberRoleOption, string> = {
-  admin: '센터 직원',
-  activist: '통번역가',
-  freelancer: '프리랜서',
-}
-
 export default function MembersPage() {
   const queryClient = useQueryClient()
+  const { t } = useTranslation()
   const { data: me } = useMe()
   const [editing, setEditing] = useState<Record<string, UpdateMemberRoleRequest>>({})
+
+  const roleLabels: Record<MemberRoleOption, string> = {
+    admin: t.member.role_admin,
+    activist: t.member.role_activist,
+    freelancer: t.member.role_freelancer,
+  }
 
   const { data: members = [], isLoading } = useQuery({
     queryKey: queryKeys.members,
@@ -72,16 +74,14 @@ export default function MembersPage() {
     <AppShell>
       <div className="space-y-4">
         <div>
-          <h1 className="text-lg font-bold">비이주민 회원 관리</h1>
-          <p className="text-xs text-gray-500 mt-1">
-            센터 직원만 회원의 센터/통번역가/프리랜서 구분을 변경할 수 있습니다.
-          </p>
+          <h1 className="text-lg font-bold">{t.member.title}</h1>
+          <p className="text-xs text-gray-500 mt-1">{t.member.subtitle}</p>
         </div>
 
-        {error && <p className="text-xs text-red-500">{error instanceof Error ? error.message : '저장에 실패했습니다.'}</p>}
+        {error && <p className="text-xs text-red-500">{error instanceof Error ? error.message : t.member.err_save}</p>}
 
         {members.length === 0 ? (
-          <EmptyState message="관리할 비이주민 회원이 없습니다." />
+          <EmptyState message={t.member.empty} />
         ) : (
           <div className="space-y-3">
             {members.map(member => {
@@ -93,10 +93,10 @@ export default function MembersPage() {
                       <p className="text-sm font-semibold truncate">{member.name || member.email || member.authUserId}</p>
                       <p className="text-xs text-gray-400 mt-0.5">{member.email ?? member.authUserId}</p>
                       {member.phone && <p className="text-xs text-gray-400">{member.phone}</p>}
-                      {member.centerName && <p className="text-xs text-gray-400">근무 센터: {member.centerName}</p>}
+                      {member.centerName && <p className="text-xs text-gray-400">{t.member.work_center}: {member.centerName}</p>}
                     </div>
                     <Badge variant={member.approved ? 'green' : 'yellow'}>
-                      {member.approved ? '승인됨' : '승인 대기'}
+                      {member.approved ? t.member.approved : t.member.pending}
                     </Badge>
                   </div>
 
@@ -106,20 +106,20 @@ export default function MembersPage() {
                         className="input"
                         value={draft.name ?? ''}
                         onChange={e => updateDraft(member, { name: e.target.value })}
-                        placeholder="이름"
+                        placeholder={t.member.name_placeholder}
                       />
                       <input
                         className="input"
                         value={draft.phone ?? ''}
                         onChange={e => updateDraft(member, { phone: e.target.value })}
-                        placeholder="연락처"
+                        placeholder={t.member.phone_placeholder}
                       />
                     </div>
                   )}
 
                   <div>
                     <label className="label">
-                      역할 {me?.authUserId === member.authUserId && <span className="text-xs text-red-500 font-normal ml-1">(본인 역할 변경 불가)</span>}
+                      {t.member.role_label} {me?.authUserId === member.authUserId && <span className="text-xs text-red-500 font-normal ml-1">{t.member.self_role_note}</span>}
                     </label>
                     <select
                       className="input"
@@ -139,7 +139,7 @@ export default function MembersPage() {
                     disabled={isPending || me?.authUserId === member.authUserId}
                     onClick={() => saveRole({ authUserId: member.authUserId, body: draft })}
                   >
-                    {isPending ? '저장 중...' : '역할 저장'}
+                    {isPending ? t.common.saving : t.member.role_save}
                   </button>
                 </div>
               )

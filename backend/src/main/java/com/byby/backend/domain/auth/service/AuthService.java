@@ -79,6 +79,18 @@ public class AuthService {
         });
     }
 
+    public boolean emailExists(String email) {
+        String normalizedEmail = trimToNull(email);
+        if (normalizedEmail == null) return false;
+
+        String lookupEmail = normalizedEmail.toLowerCase(Locale.ROOT);
+        return listSupabaseUsers().stream()
+                .map(user -> text(user, "email"))
+                .filter(StringUtils::hasText)
+                .map(value -> value.trim().toLowerCase(Locale.ROOT))
+                .anyMatch(lookupEmail::equals);
+    }
+
     @Transactional
     public void registerProfile(AuthRequest.RegisterProfile req, UserPrincipal principal) {
         if (principal == null) throw new GeneralException(GeneralErrorCode.UNAUTHORIZED);
@@ -635,4 +647,30 @@ public class AuthService {
                 .build();
         interpreterRepository.save(interpreter);
     }
+
+    @Transactional
+    public void deleteAccount(UUID authUserId) {
+        patientRepository.findByAuthUserId(authUserId).ifPresent(patientRepository::delete);
+        interpreterRepository.findByAuthUserId(authUserId).ifPresent(interpreterRepository::delete);
+        adminProfileRepository.findByAuthUserId(authUserId).ifPresent(adminProfileRepository::delete);
+
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(supabaseUrl + "/auth/v1/admin/users/" + authUserId))
+                    .header("apikey", supabaseServiceKey)
+                    .header("Authorization", "Bearer " + supabaseServiceKey)
+                    .DELETE()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 400 && response.statusCode() != 404) {
+                log.error("Failed to delete user in Supabase: {} {}", response.statusCode(), response.body());
+                throw new RuntimeException("Supabase deletion failed");
+            }
+        } catch (Exception e) {
+            log.error("Error deleting Supabase user: {}", e.getMessage(), e);
+            throw new GeneralException(GeneralErrorCode.INTERNAL_SERVER_ERROR, "Failed to delete account");
+        }
+    }
+
 }

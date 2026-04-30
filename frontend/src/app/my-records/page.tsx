@@ -37,41 +37,41 @@ export default function MyRecordsPage() {
 
   return (
     <AppShell>
-      <h1 className="text-lg font-bold mb-4">병원 방문 보고서</h1>
+      <h1 className="text-lg font-bold mb-4">{t.my_records.title}</h1>
 
       <section className="mb-5">
-        <h2 className="font-semibold text-sm text-gray-600 mb-2">이주민 열람용 기록</h2>
+        <h2 className="font-semibold text-sm text-gray-600 mb-2">{t.my_records.patient_records_section}</h2>
         {records.length === 0 ? (
-          <EmptyState message="병원 방문 보고서가 없습니다." />
+          <EmptyState message={t.my_records.no_records} />
         ) : (
           <div className="space-y-2">
             {records.map(c => (
               <div key={c.id} className="card">
                 <p className="text-sm font-medium">{c.consultationDate}</p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {c.hospitalName ?? '병원 미기록'}
+                  {c.hospitalName ?? t.my_records.no_hospital}
                   {c.department && ` · ${c.department}`}
                   {c.doctorName && ` · ${c.doctorName}`}
                 </p>
                 {c.diagnosisNameCode && (
-                  <p className="text-sm mt-3 font-medium">진단명: {c.diagnosisNameCode}</p>
+                  <p className="text-sm mt-3 font-medium">{t.my_records.diagnosis_label}: {c.diagnosisNameCode}</p>
                 )}
                 {c.diagnosisContent && (
-                  <InfoBlock label="받은 진단 내용" value={c.diagnosisContent} />
+                  <InfoBlock label={t.my_records.diagnosis_content} value={c.diagnosisContent} />
                 )}
                 {c.treatmentResult && (
-                  <InfoBlock label="진료 결과" value={c.treatmentResult} />
+                  <InfoBlock label={t.my_records.treatment_result} value={c.treatmentResult} />
                 )}
                 {c.medicationInstruction && (
-                  <InfoBlock label="처방받은 약 복용" value={c.medicationInstruction} />
+                  <InfoBlock label={t.my_records.medication} value={c.medicationInstruction} />
                 )}
                 {c.nextAppointmentDate && (
                   <p className="text-xs text-primary-600 mt-3">
-                    다음 진료 일정: {c.nextAppointmentDate}
+                    {t.my_records.next_appointment}: {c.nextAppointmentDate}
                   </p>
                 )}
                 {c.patientComment && (
-                  <InfoBlock label="통번역가 코멘트" value={c.patientComment} />
+                  <InfoBlock label={t.my_records.patient_comment} value={c.patientComment} />
                 )}
               </div>
             ))}
@@ -81,15 +81,15 @@ export default function MyRecordsPage() {
 
       <section>
         <div className="flex justify-between items-center mb-2">
-          <h2 className="font-semibold text-sm text-gray-600">저장된 대본</h2>
+          <h2 className="font-semibold text-sm text-gray-600">{t.my_records.scripts_section}</h2>
           {me?.entityId && (
             <Link href={`/scripts/patient/${me.entityId}`} className="text-xs text-primary-600">
-              새 대본 생성
+              {t.my_records.new_script}
             </Link>
           )}
         </div>
         {scripts.length === 0 ? (
-          <EmptyState message="저장된 대본이 없습니다." />
+          <EmptyState message={t.my_records.no_scripts} />
         ) : (
           <div className="space-y-2">
             {scripts.map(s => (
@@ -99,7 +99,7 @@ export default function MyRecordsPage() {
                     {labels.script[s.scriptType]}
                   </span>
                   <span className="text-xs text-gray-400">
-                    {new Date(s.createdAt).toLocaleDateString()}
+                    {new Date(s.createdAt).toLocaleDateString(t.locale)}
                   </span>
                 </div>
                 <p className="text-sm text-gray-700 line-clamp-2">{s.contentKo}</p>
@@ -107,7 +107,7 @@ export default function MyRecordsPage() {
                   href={`/scripts/${s.id}/present`}
                   className="mt-2 block text-center py-2 rounded-lg bg-primary-50 text-primary-700 text-sm font-medium"
                 >
-                  의사에게 보여주기
+                  {t.my_records.show_doctor}
                 </Link>
               </div>
             ))}

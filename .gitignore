@@ -36,6 +36,7 @@ frontend/out/
 frontend/.vercel/
 frontend/coverage/
 frontend/.turbo/
+*.tsbuildinfo
 
 # ─── Docker ─────────────────────────────────────────────
 # docker-compose.override.yml 은 로컬 전용이므로 무시

@@ -8,9 +8,11 @@ import Spinner from '@/components/ui/Spinner'
 import { centerApi } from '@/lib/api'
 import { queryKeys } from '@/lib/queryKeys'
 import type { Center } from '@/lib/types'
+import { useTranslation } from '@/lib/i18n/I18nContext'
 
 export default function CentersPage() {
   const queryClient = useQueryClient()
+  const { t } = useTranslation()
   const [editing, setEditing] = useState<Center | null>(null)
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
@@ -36,7 +38,7 @@ export default function CentersPage() {
         phone: phone.trim() || undefined,
         active: true,
       }
-      if (!body.name) return Promise.reject(new Error('센터 이름을 입력해주세요.'))
+      if (!body.name) return Promise.reject(new Error(t.center.err_name))
       return editing
         ? centerApi.update(editing.id, body)
         : centerApi.create(body)
@@ -56,27 +58,25 @@ export default function CentersPage() {
     <AppShell>
       <div className="space-y-4">
         <div>
-          <h1 className="text-lg font-bold">센터 관리</h1>
-          <p className="text-xs text-gray-500 mt-1">
-            센터 직원과 통번역가는 같은 근무 센터일 때만 관리할 수 있습니다.
-          </p>
+          <h1 className="text-lg font-bold">{t.center.title}</h1>
+          <p className="text-xs text-gray-500 mt-1">{t.center.subtitle}</p>
         </div>
 
         <form onSubmit={e => { e.preventDefault(); saveCenter() }} className="card space-y-3">
-          <h2 className="font-semibold text-sm">{editing ? '센터 정보 수정' : '센터 생성'}</h2>
+          <h2 className="font-semibold text-sm">{editing ? t.center.form_edit : t.center.form_create}</h2>
           <div>
-            <label className="label">센터 이름</label>
-            <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder="예: 동행센터" />
+            <label className="label">{t.center.name_label}</label>
+            <input className="input" value={name} onChange={e => setName(e.target.value)} placeholder={t.center.name_placeholder} />
           </div>
           <div>
-            <label className="label">주소</label>
+            <label className="label">{t.center.address_label}</label>
             <input className="input" value={address} onChange={e => setAddress(e.target.value)} />
           </div>
           <div>
-            <label className="label">연락처</label>
-            <input className="input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="02-000-0000" />
+            <label className="label">{t.center.phone_label}</label>
+            <input className="input" value={phone} onChange={e => setPhone(e.target.value)} placeholder={t.center.phone_placeholder} />
           </div>
-          {error && <p className="text-xs text-red-500">{error instanceof Error ? error.message : '저장에 실패했습니다.'}</p>}
+          {error && <p className="text-xs text-red-500">{error instanceof Error ? error.message : t.center.err_save}</p>}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -88,16 +88,16 @@ export default function CentersPage() {
                 setPhone('')
               }}
             >
-              초기화
+              {t.center.reset}
             </button>
             <button type="submit" className="btn-primary" disabled={isPending}>
-              {isPending ? '저장 중...' : '저장'}
+              {isPending ? t.common.saving : t.common.save}
             </button>
           </div>
         </form>
 
         {centers.length === 0 ? (
-          <EmptyState message="등록된 센터가 없습니다." />
+          <EmptyState message={t.center.empty} />
         ) : (
           <div className="space-y-2">
             {centers.map(center => (

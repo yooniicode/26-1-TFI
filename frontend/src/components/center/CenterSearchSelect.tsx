@@ -34,7 +34,8 @@ export default function CenterSearchSelect({
         .then(res => {
           if (active) setCenters(res.payload ?? [])
         })
-        .catch(() => {
+        .catch(err => {
+          console.error('Center search failed:', err)
           if (active) {
             setCenters([])
             setError('센터 검색에 실패했습니다.')

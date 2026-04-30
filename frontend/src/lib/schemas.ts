@@ -58,7 +58,7 @@ export const centerSchema = z.object({
   name: z.string(),
   address: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),
-  active: z.boolean(),
+  active: z.boolean().optional().default(true),
 })
 
 export const hospitalSchema = z.object({
@@ -169,6 +169,10 @@ export const authMeSchema = z.object({
   nickname:   z.string().nullable().optional(),
 })
 
+export const emailExistsSchema = z.object({
+  exists: z.boolean(),
+})
+
 export const memberSchema = z.object({
   authUserId: z.string().uuid(),
   email: z.string().nullable().optional(),
@@ -237,6 +241,7 @@ export const schemas = {
   script:        medicalScriptSchema,
   scripts:       z.array(medicalScriptSchema),
   authMe:        authMeSchema,
+  emailExists:   emailExistsSchema,
   member:        memberSchema,
   members:       z.array(memberSchema),
   adminProfile:  adminProfileSchema,

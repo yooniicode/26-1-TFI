@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { authApi } from '@/lib/api'
 import { createClient } from '@/lib/supabase'
 import CenterSearchSelect from '@/components/center/CenterSearchSelect'
 import type { Gender, Nationality, VisaType } from '@/lib/types'
@@ -11,6 +12,10 @@ import PasswordInput from '@/components/ui/PasswordInput'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 
 type SignupType = 'patient' | 'admin' | 'interpreter' | 'freelancer'
+
+function isInvalidLoginCredentials(error: { message: string }) {
+  return error.message.toLowerCase().includes('invalid login credentials')
+}
 
 export default function LoginPage() {
   const router = useRouter()
@@ -37,6 +42,12 @@ export default function LoginPage() {
   const [resetSent, setResetSent] = useState(false)
   const [signupDone, setSignupDone] = useState(false)
 
+  function switchToSignupForMissingEmail() {
+    setIsForgotPasswordMode(false)
+    setIsSignupMode(true)
+    setError(t.login.err_not_found)
+  }
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const errorCode = params.get('error')
@@ -56,8 +67,24 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true); setError('')
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) { setError(error.message); setLoading(false); return }
+    const loginEmail = email.trim()
+    if (!loginEmail) { setError(t.login.err_email); setLoading(false); return }
+    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password })
+    if (error) {
+      if (isInvalidLoginCredentials(error)) {
+        try {
+          const res = await authApi.emailExists(loginEmail)
+          if (!res.payload.exists) {
+            switchToSignupForMissingEmail()
+            setLoading(false)
+            return
+          }
+        } catch {
+          // Keep Supabase's original error if the email existence lookup is unavailable.
+        }
+      }
+      setError(error.message); setLoading(false); return
+    }
     router.push('/auth/complete')
   }
 
@@ -75,8 +102,7 @@ export default function LoginPage() {
     
     if (error) { 
       if (error.message.includes('Signups not allowed for otp') || error.status === 400) {
-        setIsSignupMode(true)
-        setError(t.login.err_not_found || '가입되지 않은 이메일입니다. 회원가입을 먼저 진행해주세요.')
+        switchToSignupForMissingEmail()
       } else {
         setError(error.message)
       }

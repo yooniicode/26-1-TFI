@@ -1,10 +1,12 @@
-import { get, patch, post } from './client'
+import { get, patch, post, del } from './client'
 import { schemas } from '../schemas'
 import type { RegisterProfileRequest, UpdateMemberRoleRequest } from '../types'
 
 export const authApi = {
   me:              () => get('/auth/me', schemas.authMe),
+  emailExists:     (email: string) => get(`/auth/email-exists?email=${encodeURIComponent(email)}`, schemas.emailExists),
   completeSignup:  () => post<void>('/auth/complete-signup', undefined),
+  deleteAccount:   () => del<void>('/auth/me'),
   registerProfile: (body: RegisterProfileRequest) => post<void>('/auth/register-profile', body),
   bootstrapAdmin:  (secretCode: string, centerName?: string) =>
     post('/auth/bootstrap-admin', { secretCode, centerName }, schemas.authMe),

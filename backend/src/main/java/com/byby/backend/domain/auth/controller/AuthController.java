@@ -104,6 +104,14 @@ public class AuthController {
                 new AuthResponse.Me(principal.getAuthUserId(), principal.getRole(), null, null)));
     }
 
+    @GetMapping("/email-exists")
+    @Operation(summary = "이메일 가입 여부 확인")
+    public ResponseEntity<Response<AuthResponse.EmailExists>> emailExists(
+            @RequestParam String email) {
+        return ResponseEntity.ok(Response.success(SuccessCode.OK,
+                new AuthResponse.EmailExists(authService.emailExists(email))));
+    }
+
     @PostMapping("/verify")
     @Operation(summary = "토큰 검증 (개발/디버깅)")
     public ResponseEntity<Response<AuthResponse.Me>> verify(
@@ -153,4 +161,14 @@ public class AuthController {
             @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(Response.success(SuccessCode.OK, authService.updateMemberRole(authUserId, req, principal)));
     }
+
+    @DeleteMapping("/me")
+    @Operation(summary = "ȸ�� Ż��")
+    public ResponseEntity<Response<Void>> deleteAccount(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) throw new GeneralException(GeneralErrorCode.UNAUTHORIZED);
+        authService.deleteAccount(principal.getAuthUserId());
+        return ResponseEntity.ok(Response.success(SuccessCode.OK));
+    }
+
 }

@@ -6,8 +6,10 @@ import Spinner from '@/components/ui/Spinner'
 import EmptyState from '@/components/ui/EmptyState'
 import { matchApi, patientApi, interpreterApi } from '@/lib/api'
 import type { PatientMatch, Patient, Interpreter } from '@/lib/types'
+import { useTranslation } from '@/lib/i18n/I18nContext'
 
 export default function MatchingPage() {
+  const { t } = useTranslation()
   const [matches, setMatches] = useState<PatientMatch[]>([])
   const [patients, setPatients] = useState<Patient[]>([])
   const [interpreters, setInterpreters] = useState<Interpreter[]>([])
@@ -45,7 +47,7 @@ export default function MatchingPage() {
   }
 
   async function handleRemove(id: string) {
-    if (!confirm('매칭을 해제하시겠습니까?')) return
+    if (!confirm(t.matching.confirm_remove)) return
     await matchApi.remove(id)
     await load()
   }
@@ -54,24 +56,23 @@ export default function MatchingPage() {
 
   return (
     <AppShell>
-      <h1 className="text-lg font-bold mb-4">매칭 관리</h1>
+      <h1 className="text-lg font-bold mb-4">{t.matching.title}</h1>
 
-      {/* 신규 매칭 */}
       <form onSubmit={handleCreate} className="card mb-4 space-y-3">
-        <h2 className="font-semibold text-sm">새 매칭 지정</h2>
+        <h2 className="font-semibold text-sm">{t.matching.form_title}</h2>
         <div>
-          <label className="label">이주민</label>
+          <label className="label">{t.matching.patient_label}</label>
           <select className="input" value={form.patientId}
             onChange={e => setForm(f => ({ ...f, patientId: e.target.value }))} required>
-            <option value="">선택</option>
+            <option value="">{t.common.select}</option>
             {patients.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
         <div>
-          <label className="label">통번역가</label>
+          <label className="label">{t.matching.interpreter_label}</label>
           <select className="input" value={form.interpreterId}
             onChange={e => setForm(f => ({ ...f, interpreterId: e.target.value }))} required>
-            <option value="">선택</option>
+            <option value="">{t.common.select}</option>
             {interpreters.map(i => (
               <option key={i.id} value={i.id}>{i.name} ({i.languages.join(', ')})</option>
             ))}
@@ -79,14 +80,13 @@ export default function MatchingPage() {
         </div>
         {error && <p className="text-red-500 text-xs">{error}</p>}
         <button type="submit" className="btn-primary w-full" disabled={submitting}>
-          {submitting ? '처리 중...' : '매칭 지정'}
+          {submitting ? t.matching.processing : t.matching.create_btn}
         </button>
       </form>
 
-      {/* 현재 매칭 목록 */}
-      <h2 className="font-semibold text-sm mb-2">활성 매칭 ({matches.length}건)</h2>
+      <h2 className="font-semibold text-sm mb-2">{t.matching.active_matches} ({matches.length})</h2>
       {matches.length === 0 ? (
-        <EmptyState message="활성 매칭이 없습니다." />
+        <EmptyState message={t.matching.empty} />
       ) : (
         <div className="space-y-2">
           {matches.map(m => (
@@ -97,7 +97,7 @@ export default function MatchingPage() {
               </div>
               <button onClick={() => handleRemove(m.id)}
                 className="text-xs text-red-400 hover:text-red-600">
-                해제
+                {t.matching.remove_btn}
               </button>
             </div>
           ))}

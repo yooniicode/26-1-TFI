@@ -34,4 +34,8 @@ public class AuthResponse {
             boolean profileRegistered,
             boolean approved
     ) {}
+
+    public record EmailExists(
+            boolean exists
+    ) {}
 }

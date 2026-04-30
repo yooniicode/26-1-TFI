@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import AppShell from '@/components/AppShell'
-import { adminApi, centerApi, patientApi, interpreterApi } from '@/lib/api'
+import { adminApi, centerApi, patientApi, interpreterApi, authApi } from '@/lib/api'
 import { queryKeys } from '@/lib/queryKeys'
 import { createClient } from '@/lib/supabase'
 import { useMe } from '@/hooks/useMe'
@@ -198,6 +198,19 @@ export default function MyPage() {
     setConfirmPassword('')
   }
 
+    async function handleDeleteAccount() {
+    if (!confirm('���� ȸ�� Ż���Ͻðڽ��ϱ�? ����ų �� �����ϴ�.')) return;
+    try {
+      await authApi.deleteAccount();
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      window.location.href = '/login';
+    } catch (e) {
+      console.error(e);
+      alert('Ż�� ó�� �� ������ �߻��߽��ϴ�.');
+    }
+  }
+
   async function handleLogout() {
     await createClient().auth.signOut()
     window.location.href = '/login'
@@ -320,27 +333,27 @@ export default function MyPage() {
         {me?.role !== 'admin' && (
           <form onSubmit={e => { e.preventDefault(); save() }} className="space-y-4">
             <div>
-              <label className="label">이름 <span className="text-gray-400 font-normal text-xs ml-1">(실명을 입력해주세요)</span></label>
+              <label className="label">{t.mypage.name_label} <span className="text-gray-400 font-normal text-xs ml-1">{t.mypage.name_hint}</span></label>
               <input
                 className="input"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                placeholder="본명 입력"
+                placeholder={t.mypage.name_placeholder}
                 required
               />
             </div>
             {me?.role === 'patient' && (
               <>
                 <div>
-                  <label className="label">연락처</label>
+                  <label className="label">{t.mypage.phone}</label>
                   <input className="input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="010-0000-0000" />
                 </div>
                 <div>
-                  <label className="label">거주 지역</label>
+                  <label className="label">{t.mypage.region}</label>
                   <input className="input" value={region} onChange={e => setRegion(e.target.value)} />
                 </div>
                 <div>
-                  <label className="label">비자 종류</label>
+                  <label className="label">{t.mypage.visa_type}</label>
                   <select className="input" value={visaType} onChange={e => setVisaType(e.target.value as VisaType)}>
                     {VISA_TYPES.map(value => (
                       <option key={value} value={value}>{labels.visa[value]}</option>
@@ -348,7 +361,7 @@ export default function MyPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="label">비자 비고</label>
+                  <label className="label">{t.mypage.visa_note}</label>
                   <input className="input" value={visaNote} onChange={e => setVisaNote(e.target.value)} />
                 </div>
               </>
@@ -356,55 +369,55 @@ export default function MyPage() {
 
             {me?.role === 'interpreter' && (
               <div>
-                <label className="label">연락처</label>
+                <label className="label">{t.mypage.phone}</label>
                 <input className="input" value={intPhone} onChange={e => setIntPhone(e.target.value)} placeholder="010-0000-0000" />
-                <p className="text-xs text-gray-500 mt-2">통번역가 구분과 권한은 센터 직원이 회원 관리에서 변경합니다.</p>
+                <p className="text-xs text-gray-500 mt-2">{t.mypage.interpreter_role_note}</p>
               </div>
             )}
 
             {saveError && <p className="text-red-500 text-xs">{saveError.message}</p>}
-            {isSuccess && <p className="text-green-600 text-xs">저장되었습니다.</p>}
+            {isSuccess && <p className="text-green-600 text-xs">{t.mypage.save_success}</p>}
 
             <button type="submit" className="btn-primary w-full" disabled={saving}>
-              {saving ? '저장 중...' : '저장'}
+              {saving ? t.mypage.saving : t.common.save}
             </button>
           </form>
         )}
 
         <div className="border-t pt-5">
-          <h2 className="font-semibold text-sm mb-3">비밀번호 변경</h2>
+          <h2 className="font-semibold text-sm mb-3">{t.mypage.password_change}</h2>
           <form onSubmit={handlePasswordChange} className="space-y-3">
             <div>
-              <label className="label">새 비밀번호</label>
+              <label className="label">{t.mypage.new_password}</label>
               <PasswordInput
                 value={newPassword}
                 onChange={setNewPassword}
-                placeholder="8자 이상"
+                placeholder={t.mypage.password_min_hint}
                 autoComplete="new-password"
               />
             </div>
             <div>
-              <label className="label">비밀번호 확인</label>
+              <label className="label">{t.mypage.password_confirm}</label>
               <PasswordInput
                 value={confirmPassword}
                 onChange={setConfirmPassword}
-                placeholder="비밀번호 재입력"
+                placeholder={t.mypage.password_reenter}
                 autoComplete="new-password"
               />
               {confirmPassword && (
                 <p className={`text-xs mt-1 ${newPassword === confirmPassword ? 'text-green-600' : 'text-red-500'}`}>
-                  {newPassword === confirmPassword ? '비밀번호가 일치합니다.' : '비밀번호가 일치하지 않습니다.'}
+                  {newPassword === confirmPassword ? t.mypage.password_match : t.mypage.password_no_match}
                 </p>
               )}
             </div>
             {pwError && <p className="text-red-500 text-xs">{pwError}</p>}
-            {pwSuccess && <p className="text-green-600 text-xs">비밀번호가 변경되었습니다.</p>}
+            {pwSuccess && <p className="text-green-600 text-xs">{t.mypage.password_success}</p>}
             <button
               type="submit"
               className="btn-secondary w-full"
               disabled={pwSaving || !newPassword || !confirmPassword}
             >
-              {pwSaving ? '변경 중...' : '비밀번호 변경'}
+              {pwSaving ? t.mypage.password_changing : t.mypage.password_change_btn}
             </button>
           </form>
         </div>
@@ -415,7 +428,14 @@ export default function MyPage() {
             onClick={handleLogout}
             className="w-full text-sm text-red-500 hover:text-red-600 py-2"
           >
-            로그아웃
+            {t.mypage.logout}
+          </button>
+          <button
+            type="button"
+            onClick={handleDeleteAccount}
+            className="w-full text-xs text-gray-400 hover:text-gray-500 py-2 border-t mt-2"
+          >
+            ȸ�� Ż��
           </button>
         </div>
       </div>
