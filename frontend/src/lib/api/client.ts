@@ -55,7 +55,7 @@ const wrapperSchema = z.object({
   statusCode: z.number(),
   isSuccess:  z.boolean(),
   message:    z.string(),
-  payload:    z.unknown(),
+  payload:    z.unknown().optional(),
   pageInfo:   z.object({
     page:          z.number(),
     size:          z.number(),

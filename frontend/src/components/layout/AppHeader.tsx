@@ -8,7 +8,7 @@ import type { LayoutMode } from '@/hooks/useLayoutMode'
 import type { AuthMe } from '@/lib/types'
 
 interface AppHeaderProps {
-  me?: AuthMe
+  me?: AuthMe | null
   layoutMode: LayoutMode
   onLayoutModeChange: (mode: LayoutMode) => void
 }

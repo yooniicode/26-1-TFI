@@ -9,7 +9,7 @@ import type { AuthMe } from '@/lib/types'
 import PasswordInput from '@/components/ui/PasswordInput'
 
 interface AuthGateOverlaysProps {
-  me?: AuthMe
+  me?: AuthMe | null
   pathname: string
 }
 
@@ -30,12 +30,16 @@ export default function AuthGateOverlays({ me, pathname }: AuthGateOverlaysProps
 
   useEffect(() => {
     createClient().auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.replace('/login')
+        return
+      }
       const request = getRequestedMemberRole(session?.user.user_metadata ?? null)
       setPendingRequest(request)
       if (request?.centerName) setBootstrapCenterName(request.centerName)
       if (request) authApi.completeSignup().catch(() => undefined)
     })
-  }, [])
+  }, [router])
 
   async function handleLogout() {
     await createClient().auth.signOut()

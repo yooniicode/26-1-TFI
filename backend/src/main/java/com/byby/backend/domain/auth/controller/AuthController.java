@@ -163,7 +163,7 @@ public class AuthController {
     }
 
     @DeleteMapping("/me")
-    @Operation(summary = "ȸ�� Ż��")
+    @Operation(summary = "회원 탈퇴")
     public ResponseEntity<Response<Void>> deleteAccount(
             @AuthenticationPrincipal UserPrincipal principal) {
         if (principal == null) throw new GeneralException(GeneralErrorCode.UNAUTHORIZED);
