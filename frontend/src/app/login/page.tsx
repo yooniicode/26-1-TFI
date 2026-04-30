@@ -103,9 +103,14 @@ export default function LoginPage() {
     }
   }
 
-  async function handleForgotPassword(e: React.FormEvent) {
-    e.preventDefault()
-    if (!email) { setError('이메일을 입력해주세요.'); return }
+  async function handleForgotPassword(e?: React.FormEvent) {
+    if (e) e.preventDefault()
+    if (!email) {
+      setError('이메일을 입력해주세요.')
+      setIsForgotPasswordMode(true)
+      setIsSignupMode(false)
+      return
+    }
     setLoading(true); setError('')
     const supabase = createClient()
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -412,7 +417,7 @@ export default function LoginPage() {
               <span className="text-gray-300">|</span>
               <button
                 type="button"
-                onClick={() => { setError(''); setIsForgotPasswordMode(true); setIsSignupMode(false); }}
+                onClick={() => handleForgotPassword()}
                 disabled={loading}
                 className="text-sm text-primary-600 hover:underline"
               >
