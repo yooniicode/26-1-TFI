@@ -2,6 +2,14 @@
 
 `frontend`(Next.js) + `backend`(Spring Boot) + `PostgreSQL` 기반으로 구성되어 있으며, Supabase 인증(JWT)과 역할 기반 접근 제어를 사용합니다.
 
+## ✨ 주요 기능 (Features)
+
+- **비밀번호 없는 로그인 (Magic Link) 및 인증**: Supabase를 활용한 안전한 이메일 링크 인증과 비밀번호 초기화 프로세스 제공
+- **역할 기반의 확실한 접근 제어 (RBAC)**: 관리자(ADMIN), 통번역가(INTERPRETER), 이주민(PATIENT) 역할에 따라 데이터에 대한 열람·수정 권한 분리
+- **원스톱 상담 및 통번역 일지 관리**: 플랫폼 내부에서 통번역 활동 일지 생성(`/consultations/new`) 및 통합 관리 가능
+- **이주민-통번역가 매칭 및 인수인계**: 통역 연속성을 보장하기 위한 담당자 지정 프로세스(매칭) 및 활동 기록 인수인계 추적
+- **사용자 프로필 및 계정 권한 보호**: 사용자 본인의 실명 갱신 기능과 자기 자신을 강등시킬 수 없도록 막는 안전 장치 탑재
+
 ## 1) 전체 아키텍처
 
 ```text
@@ -60,7 +68,9 @@
     - `/`: 플랫폼 소개 랜딩 페이지 (비로그인 접근 가능)
     - `/login`: 로그인/회원가입
     - `/auth/complete`: 프로필 등록 / 승인 대기 / 최초 관리자 bootstrap
-    - `/dashboard`, `/consultations`, `/patients`, `/interpreters`, `/matching`, `/handovers`, `/members`, `/centers`, `/mypage`
+    - `/auth/callback`: 이메일 OTP(Magic Link 등) 콜백 처리
+    - `/auth/reset-password`: 잊어버린 비밀번호 재설정
+    - `/dashboard`, `/consultations(/new)`, `/patients`, `/interpreters`, `/matching`, `/handovers`, `/members`, `/mypage`
   - `src/components/AppShell`: 레이아웃 (AppHeader, AppNavigation, AuthGateOverlays, LayoutModeToggle)
   - `src/lib/api/`: 도메인별 API 클라이언트 분리 (`auth`, `admin`, `centers`, ...)
   - `src/lib/supabase.ts`: Supabase 클라이언트/토큰 처리
