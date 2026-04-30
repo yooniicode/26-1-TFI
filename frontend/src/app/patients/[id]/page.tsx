@@ -227,11 +227,27 @@ export default function PatientDetailPage() {
         </div>
       )}
 
-      {/* 상담 이력 */}
+      {/* 담당(매칭) 통번역가 */}
       <section className="mb-4">
-        <h2 className="font-semibold text-sm mb-2">상담 이력 ({history.length}건)</h2>
+        <h2 className="font-semibold text-sm mb-2">담당했던 통번역가</h2>
+        {Array.from(new Set(history.map(h => h.interpreterName).filter(Boolean))).length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {Array.from(new Set(history.map(h => h.interpreterName).filter(Boolean))).map(name => (
+               <span key={name} className="inline-flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-2 py-0.5 shadow-sm">
+                 {name} 통번역가
+               </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400">담당했던 이력이 없습니다.</p>
+        )}
+      </section>
+
+      {/* 상담(보고서) 이력 */}
+      <section className="mb-4">
+        <h2 className="font-semibold text-sm mb-2">보고서 (상담) 이력 ({history.length}건)</h2>
         {history.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-4">상담 기록이 없습니다.</p>
+          <p className="text-sm text-gray-400 text-center py-4">보고서(상담) 기록이 없습니다.</p>
         ) : (
           <div className="space-y-2">
             {history.map(c => (
@@ -239,7 +255,11 @@ export default function PatientDetailPage() {
                 className="card flex items-center justify-between hover:border-primary-200 transition-colors">
                 <div>
                   <p className="text-sm font-medium">{c.consultationDate}</p>
-                  <p className="text-xs text-gray-400">{ISSUE_LABEL[c.issueType]}{c.hospitalName && ` · ${c.hospitalName}`}</p>
+                  <p className="text-xs text-gray-400">
+                    {ISSUE_LABEL[c.issueType]}
+                    {c.hospitalName && ` · ${c.hospitalName}`}
+                    {c.interpreterName && ` · 담당: ${c.interpreterName}`}
+                  </p>
                 </div>
                 {c.confirmed ? <Badge variant="green">확인</Badge> : <Badge variant="yellow">미확인</Badge>}
               </Link>
