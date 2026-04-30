@@ -27,7 +27,6 @@ export async function middleware(request: NextRequest) {
 
     const { data: { user } } = await supabase.auth.getUser()
 
-    const { pathname } = request.nextUrl
     const isLoginPage = pathname.startsWith('/login')
     const isAuthRoute = pathname.startsWith('/auth/')
     const isLandingPage = pathname === '/'
@@ -39,7 +38,6 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   } catch {
-    const { pathname } = request.nextUrl
     const isLoginPage = pathname.startsWith('/login')
     const isAuthRoute = pathname.startsWith('/auth/')
     const isLandingPage = pathname === '/'

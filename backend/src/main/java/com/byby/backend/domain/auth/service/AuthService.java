@@ -258,9 +258,6 @@ public class AuthService {
         if (req.role() == null || req.role() == UserRole.patient) {
             throw new GeneralException(GeneralErrorCode.BAD_REQUEST, "Only non-patient roles can be managed here");
         }
-//        if (principal.getAuthUserId().equals(authUserId) && req.role() != UserRole.admin) {
-//            throw new GeneralException(GeneralErrorCode.BAD_REQUEST, "You cannot remove your own center-staff role");
-//        }
 
         findSupabaseUser(authUserId).ifPresent(user -> {
             Interpreter currentInterpreter = interpreterRepository.findByAuthUserId(authUserId).orElse(null);

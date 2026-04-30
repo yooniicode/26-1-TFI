@@ -11,21 +11,9 @@ import { GENDERS, NATIONALITIES, VISA_TYPES, useEnumLabels } from '@/lib/i18n/en
 import { useTranslation } from '@/lib/i18n/I18nContext'
 import PasswordInput from '@/components/ui/PasswordInput'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
+import { INTERPRETER_LANGUAGE_OPTIONS } from '@/lib/constants'
 
 type ProfileRole = Extract<UserRole, 'interpreter' | 'patient'>
-
-const INTERPRETER_LANGUAGE_OPTIONS = [
-  '한국어',
-  '베트남어',
-  '영어',
-  '중국어',
-  '몽골어',
-  '네팔어',
-  '러시아어',
-  '태국어',
-  '캄보디아어',
-  '미얀마어',
-]
 
 function normalizeLanguages(value: unknown): string[] {
   if (Array.isArray(value)) {

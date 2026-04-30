@@ -12,19 +12,7 @@ import { VISA_TYPES, useEnumLabels } from '@/lib/i18n/enumLabels'
 import { useTranslation } from '@/lib/i18n/I18nContext'
 import Spinner from '@/components/ui/Spinner'
 import PasswordInput from '@/components/ui/PasswordInput'
-
-const INTERPRETER_LANGUAGE_OPTIONS = [
-  '한국어',
-  '베트남어',
-  '영어',
-  '중국어',
-  '몽골어',
-  '네팔어',
-  '러시아어',
-  '태국어',
-  '캄보디아어',
-  '미얀마어',
-]
+import { INTERPRETER_LANGUAGE_OPTIONS } from '@/lib/constants'
 
 export default function MyPage() {
   const queryClient = useQueryClient()

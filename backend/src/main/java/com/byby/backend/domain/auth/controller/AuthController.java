@@ -1,4 +1,4 @@
-package com.byby.backend.domain.auth.controller;
+﻿package com.byby.backend.domain.auth.controller;
 
 import com.byby.backend.common.response.Response;
 import com.byby.backend.common.response.code.SuccessCode;
@@ -112,15 +112,8 @@ public class AuthController {
                 new AuthResponse.EmailExists(authService.emailExists(email))));
     }
 
-    @PostMapping("/verify")
-    @Operation(summary = "토큰 검증 (개발/디버깅)")
-    public ResponseEntity<Response<AuthResponse.Me>> verify(
-            @AuthenticationPrincipal UserPrincipal principal) {
-        return me(principal);
-    }
-
     @PostMapping("/complete-signup")
-    @Operation(summary = "?대찓??寃利????뚯썝媛??붿껌 ?숆린")
+    @Operation(summary = "이메일 인증 완료 후 통번역가 프로필 사전 생성")
     public ResponseEntity<Response<Void>> completeSignup(
             @AuthenticationPrincipal UserPrincipal principal) {
         authService.completeSignup(principal);
