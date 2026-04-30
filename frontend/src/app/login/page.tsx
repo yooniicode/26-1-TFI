@@ -22,9 +22,11 @@ export default function LoginPage() {
   const [phone, setPhone] = useState('')
   const [centerName, setCenterName] = useState('')
   const [isSignupMode, setIsSignupMode] = useState(false)
+  const [isForgotPasswordMode, setIsForgotPasswordMode] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [magicSent, setMagicSent] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
   const [signupDone, setSignupDone] = useState(false)
 
   async function handleLogin(e: React.FormEvent) {
@@ -101,6 +103,18 @@ export default function LoginPage() {
     }
   }
 
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault()
+    if (!email) { setError('이메일을 입력해주세요.'); return }
+    setLoading(true); setError('')
+    const supabase = createClient()
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
+    })
+    if (error) { setError(error.message); setLoading(false); return }
+    setResetSent(true); setLoading(false)
+  }
+
   if (magicSent) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
@@ -110,6 +124,30 @@ export default function LoginPage() {
           <p className="text-sm text-gray-500">
             {email} 로 로그인 링크를 보냈습니다.
           </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (resetSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="card max-w-sm w-full text-center py-10">
+          <p className="text-4xl mb-4">📧</p>
+          <h2 className="font-bold text-lg mb-2">이메일을 확인해주세요</h2>
+          <p className="text-sm text-gray-500">
+            {email} 로 비밀번호 재설정 링크를 보냈습니다.
+          </p>
+          <button
+            type="button"
+            className="btn-primary w-full mt-5"
+            onClick={() => {
+              setResetSent(false)
+              setIsForgotPasswordMode(false)
+            }}
+          >
+            로그인 화면으로
+          </button>
         </div>
       </div>
     )
@@ -147,7 +185,35 @@ export default function LoginPage() {
           <p className="text-sm text-gray-500 mt-1">통번역 지원 플랫폼</p>
         </div>
 
-        {isSignupMode ? (
+        {isForgotPasswordMode ? (
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-600 mb-4 font-medium">가입하신 이메일을 입력하시면 비밀번호 재설정 링크를 보내드립니다.</p>
+              <label className="label">이메일</label>
+              <input
+                type="email"
+                className="input"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="이메일 주소"
+                required
+              />
+            </div>
+            {error && <p className="text-red-500 text-xs">{error}</p>}
+            <button type="submit" className="btn-primary w-full" disabled={loading}>
+              {loading ? '전송 중...' : '비밀번호 재설정 메일 보내기'}
+            </button>
+            <div className="mt-3 text-center">
+              <button
+                type="button"
+                onClick={() => { setError(''); setIsForgotPasswordMode(false) }}
+                className="text-sm text-gray-600 hover:underline"
+              >
+                로그인 화면으로 돌아가기
+              </button>
+            </div>
+          </form>
+        ) : isSignupMode ? (
           <form onSubmit={handleSignup} className="space-y-4">
             <div>
               <label className="label">이름</label>
@@ -334,31 +400,43 @@ export default function LoginPage() {
               </button>
             </form>
 
-            <div className="mt-3 text-center">
+            <div className="mt-3 text-center space-x-1">
               <button
+                type="button"
                 onClick={handleMagicLink}
                 disabled={loading}
                 className="text-sm text-primary-600 hover:underline"
               >
                 이메일 링크로 로그인
               </button>
+              <span className="text-gray-300">|</span>
+              <button
+                type="button"
+                onClick={() => { setError(''); setIsForgotPasswordMode(true); setIsSignupMode(false); }}
+                disabled={loading}
+                className="text-sm text-primary-600 hover:underline"
+              >
+                비밀번호 찾기
+              </button>
             </div>
           </>
         )}
 
-        <div className="mt-4 text-center">
-          <button
-            type="button"
-            disabled={loading}
-            className="text-sm text-gray-600 hover:underline"
-            onClick={() => {
-              setError('')
-              setIsSignupMode(prev => !prev)
-            }}
-          >
-            {isSignupMode ? '이미 계정이 있어요 (로그인)' : '회원가입'}
-          </button>
-        </div>
+        {!isForgotPasswordMode && (
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              disabled={loading}
+              className="text-sm text-gray-600 hover:underline"
+              onClick={() => {
+                setError('')
+                setIsSignupMode(prev => !prev)
+              }}
+            >
+              {isSignupMode ? '이미 계정이 있어요 (로그인)' : '회원가입'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
