@@ -12,7 +12,7 @@ export const interpreterApi = {
   list:       (page = 0, query?: string) => get(listPath(page, query), schemas.interpreters),
   get:        (id: string) => get(`/interpreters/${id}`, schemas.interpreter),
   create:     (body: unknown) => post('/interpreters', body, schemas.interpreter),
-  update:     (id: string, body: { phone?: string; role?: InterpreterRole }) =>
+  update:     (id: string, body: { name?: string; phone?: string; role?: InterpreterRole }) =>
     put(`/interpreters/${id}`, body, schemas.interpreter),
   deactivate: (id: string) => patch<void>(`/interpreters/${id}/deactivate`),
 }

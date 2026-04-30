@@ -46,6 +46,7 @@ export default function MyPage() {
     enabled: me?.role === 'admin',
   })
 
+  const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [region, setRegion] = useState('')
   const [visaType, setVisaType] = useState<VisaType>('OTHER')
@@ -62,6 +63,7 @@ export default function MyPage() {
 
   useEffect(() => {
     if (patient) {
+      setName(patient.name ?? '')
       setPhone(patient.phone ?? '')
       setRegion(patient.region ?? '')
       setVisaType(patient.visaType)
@@ -70,7 +72,10 @@ export default function MyPage() {
   }, [patient])
 
   useEffect(() => {
-    if (interpreter) setIntPhone(interpreter.phone ?? '')
+    if (interpreter) {
+      setName(interpreter.name ?? '')
+      setIntPhone(interpreter.phone ?? '')
+    }
   }, [interpreter])
 
   useEffect(() => {
@@ -93,9 +98,9 @@ export default function MyPage() {
     mutationFn: () => {
       if (!me?.entityId) return Promise.reject(new Error('프로필 정보를 불러오지 못했습니다.'))
       if (me.role === 'patient') {
-        return patientApi.update(me.entityId, { phone, region, visaType, visaNote })
+        return patientApi.update(me.entityId, { name: name.trim(), phone, region, visaType, visaNote })
       }
-      return interpreterApi.update(me.entityId, { phone: intPhone })
+      return interpreterApi.update(me.entityId, { name: name.trim(), phone: intPhone })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.patients.detail(me?.entityId ?? '') })
@@ -311,6 +316,16 @@ export default function MyPage() {
 
         {me?.role !== 'admin' && (
           <form onSubmit={e => { e.preventDefault(); save() }} className="space-y-4">
+            <div>
+              <label className="label">이름 <span className="text-gray-400 font-normal text-xs ml-1">(실명을 입력해주세요)</span></label>
+              <input
+                className="input"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="본명 입력"
+                required
+              />
+            </div>
             {me?.role === 'patient' && (
               <>
                 <div>

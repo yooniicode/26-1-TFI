@@ -9,6 +9,7 @@ import Spinner from '@/components/ui/Spinner'
 import { authApi } from '@/lib/api'
 import { queryKeys } from '@/lib/queryKeys'
 import type { Member, UpdateMemberRoleRequest } from '@/lib/types'
+import { useMe } from '@/hooks/useMe'
 
 type MemberRoleOption = 'admin' | 'activist' | 'freelancer'
 
@@ -20,6 +21,7 @@ const roleLabels: Record<MemberRoleOption, string> = {
 
 export default function MembersPage() {
   const queryClient = useQueryClient()
+  const { data: me } = useMe()
   const [editing, setEditing] = useState<Record<string, UpdateMemberRoleRequest>>({})
 
   const { data: members = [], isLoading } = useQuery({
@@ -116,10 +118,13 @@ export default function MembersPage() {
                   )}
 
                   <div>
-                    <label className="label">역할</label>
+                    <label className="label">
+                      역할 {me?.authUserId === member.authUserId && <span className="text-xs text-red-500 font-normal ml-1">(본인 역할 변경 불가)</span>}
+                    </label>
                     <select
                       className="input"
                       value={roleValue(draft)}
+                      disabled={me?.authUserId === member.authUserId}
                       onChange={e => updateDraft(member, rolePatch(e.target.value as MemberRoleOption))}
                     >
                       {(Object.entries(roleLabels) as [MemberRoleOption, string][]).map(([value, label]) => (
@@ -131,7 +136,7 @@ export default function MembersPage() {
                   <button
                     type="button"
                     className="btn-primary w-full"
-                    disabled={isPending}
+                    disabled={isPending || me?.authUserId === member.authUserId}
                     onClick={() => saveRole({ authUserId: member.authUserId, body: draft })}
                   >
                     {isPending ? '저장 중...' : '역할 저장'}
