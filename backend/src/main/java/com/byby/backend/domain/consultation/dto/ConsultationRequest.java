@@ -35,6 +35,11 @@ public class ConsultationRequest {
     ) {}
 
     public record Update(
+            LocalDate consultationDate,
+            UUID hospitalId,
+            IssueType issueType,
+            ConsultationMethod method,
+            ProcessingType processing,
             String memo,
             LocalDate nextAppointmentDate,
             String department,

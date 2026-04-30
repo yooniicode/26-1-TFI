@@ -5,6 +5,8 @@ import com.byby.backend.common.exception.GeneralException;
 import com.byby.backend.common.response.code.BusinessErrorCode;
 import com.byby.backend.common.response.code.GeneralErrorCode;
 import com.byby.backend.common.security.UserPrincipal;
+import com.byby.backend.domain.admin.service.AdminService;
+import com.byby.backend.domain.center.entity.Center;
 import com.byby.backend.domain.interpreter.entity.Interpreter;
 import com.byby.backend.domain.interpreter.repository.InterpreterRepository;
 import com.byby.backend.domain.consultation.dto.ConsultationRequest;
@@ -15,6 +17,7 @@ import com.byby.backend.domain.hospital.entity.Hospital;
 import com.byby.backend.domain.hospital.repository.HospitalRepository;
 import com.byby.backend.domain.matching.repository.PatientMatchRepository;
 import com.byby.backend.domain.patient.entity.Patient;
+import com.byby.backend.domain.patient.repository.PatientCenterRepository;
 import com.byby.backend.domain.patient.repository.PatientRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -34,6 +37,8 @@ public class ConsultationService {
     private final InterpreterRepository interpreterRepository;
     private final HospitalRepository hospitalRepository;
     private final PatientMatchRepository patientMatchRepository;
+    private final AdminService adminService;
+    private final PatientCenterRepository patientCenterRepository;
 
     @Transactional
     public ConsultationResponse.Detail create(ConsultationRequest.Create req, UserPrincipal principal) {
@@ -77,14 +82,16 @@ public class ConsultationService {
         return ConsultationResponse.Detail.from(consultationRepository.save(consultation));
     }
 
-    public Page<ConsultationResponse.Summary> getAll(Pageable pageable, UserPrincipal principal) {
+    public Page<ConsultationResponse.Summary> getAll(Pageable pageable, UserPrincipal principal, String patientQuery) {
         if (principal.isAdmin()) {
-            return consultationRepository.findAll(pageable).map(ConsultationResponse.Summary::from);
+            Center center = adminService.getAdminCenter(principal);
+            return consultationRepository.searchByCenter(center.getId(), patientQuery, pageable)
+                    .map(ConsultationResponse.Summary::from);
         }
         if (principal.isInterpreter()) {
             Interpreter interpreter = interpreterRepository.findByAuthUserId(principal.getAuthUserId())
                     .orElseThrow(() -> new BusinessException(BusinessErrorCode.INTERPRETER_NOT_FOUND));
-            return consultationRepository.findByInterpreter(interpreter, pageable)
+            return consultationRepository.searchByInterpreter(interpreter.getId(), patientQuery, pageable)
                     .map(ConsultationResponse.Summary::from);
         }
         throw new GeneralException(GeneralErrorCode.FORBIDDEN);
@@ -102,15 +109,25 @@ public class ConsultationService {
     @Transactional
     public ConsultationResponse.Detail update(UUID id, ConsultationRequest.Update req, UserPrincipal principal) {
         Consultation c = findConsultation(id);
-        if (!principal.isInterpreter()) throw new GeneralException(GeneralErrorCode.FORBIDDEN);
-        if (c.isConfirmed()) throw new BusinessException(BusinessErrorCode.CONSULTATION_ALREADY_CONFIRMED);
-
-        Interpreter interpreter = interpreterRepository.findByAuthUserId(principal.getAuthUserId())
-                .orElseThrow(() -> new BusinessException(BusinessErrorCode.INTERPRETER_NOT_FOUND));
-        if (!c.getInterpreter().getId().equals(interpreter.getId())) {
-            throw new BusinessException(BusinessErrorCode.ACCESS_DENIED_NOT_OWNER);
+        if (principal.isAdmin()) {
+            requireAdminCenterAccess(c, principal);
+        } else if (principal.isInterpreter()) {
+            if (c.isConfirmed()) throw new BusinessException(BusinessErrorCode.CONSULTATION_ALREADY_CONFIRMED);
+            Interpreter interpreter = interpreterRepository.findByAuthUserId(principal.getAuthUserId())
+                    .orElseThrow(() -> new BusinessException(BusinessErrorCode.INTERPRETER_NOT_FOUND));
+            if (!c.getInterpreter().getId().equals(interpreter.getId())) {
+                throw new BusinessException(BusinessErrorCode.ACCESS_DENIED_NOT_OWNER);
+            }
+        } else {
+            throw new GeneralException(GeneralErrorCode.FORBIDDEN);
         }
-        c.update(req.memo(), req.nextAppointmentDate(), req.department(),
+
+        Hospital hospital = req.hospitalId() != null
+                ? hospitalRepository.findById(req.hospitalId())
+                    .orElseThrow(() -> new BusinessException(BusinessErrorCode.HOSPITAL_NOT_FOUND))
+                : c.getHospital();
+        c.update(req.consultationDate(), hospital, req.issueType(), req.method(), req.processing(),
+                req.memo(), req.nextAppointmentDate(), req.department(),
                 req.doctorName(), req.patientComment(), req.treatmentResult(),
                 req.diagnosisContent(), req.diagnosisNameCode(), req.medicationInstruction(),
                 req.counselorName(), req.workDescription(), req.doctorConfirmationSignature(),
@@ -122,6 +139,7 @@ public class ConsultationService {
     public ConsultationResponse.Detail confirm(UUID id, ConsultationRequest.Confirm req, UserPrincipal principal) {
         if (!principal.isAdmin()) throw new GeneralException(GeneralErrorCode.FORBIDDEN);
         Consultation c = findConsultation(id);
+        requireAdminCenterAccess(c, principal);
         if (c.isConfirmed()) throw new BusinessException(BusinessErrorCode.CONSULTATION_ALREADY_CONFIRMED);
         c.confirm(req.confirmedBy(), req.confirmedByPhone());
         return ConsultationResponse.Detail.from(c);
@@ -138,7 +156,12 @@ public class ConsultationService {
             boolean isAssigned = patientMatchRepository.existsByPatientIdAndInterpreterIdAndActiveTrue(
                     patientId, interpreter.getId());
             if (!isAssigned) throw new BusinessException(BusinessErrorCode.ACCESS_DENIED_NOT_ASSIGNED);
-        } else if (!principal.isAdmin()) {
+        } else if (principal.isAdmin()) {
+            Center center = adminService.getAdminCenter(principal);
+            if (!patientCenterRepository.existsByPatientIdAndCenterId(patientId, center.getId())) {
+                throw new GeneralException(GeneralErrorCode.FORBIDDEN);
+            }
+        } else {
             throw new GeneralException(GeneralErrorCode.FORBIDDEN);
         }
         return consultationRepository.findByPatientId(patientId, pageable)
@@ -147,6 +170,12 @@ public class ConsultationService {
 
     public Page<ConsultationResponse.Summary> getByInterpreter(UUID interpreterId, Pageable pageable, UserPrincipal principal) {
         if (principal.isAdmin()) {
+            Center center = adminService.getAdminCenter(principal);
+            Interpreter interpreter = interpreterRepository.findById(interpreterId)
+                    .orElseThrow(() -> new BusinessException(BusinessErrorCode.INTERPRETER_NOT_FOUND));
+            if (interpreter.getCenter() == null || !interpreter.getCenter().getId().equals(center.getId())) {
+                throw new GeneralException(GeneralErrorCode.FORBIDDEN);
+            }
             return consultationRepository.findByInterpreterId(interpreterId, pageable)
                     .map(ConsultationResponse.Summary::from);
         }
@@ -184,7 +213,10 @@ public class ConsultationService {
     }
 
     private void checkAccess(Consultation c, UserPrincipal principal) {
-        if (principal.isAdmin()) return;
+        if (principal.isAdmin()) {
+            requireAdminCenterAccess(c, principal);
+            return;
+        }
         if (principal.isInterpreter()) {
             Interpreter interpreter = interpreterRepository.findByAuthUserId(principal.getAuthUserId())
                     .orElseThrow(() -> new BusinessException(BusinessErrorCode.INTERPRETER_NOT_FOUND));
@@ -202,5 +234,21 @@ public class ConsultationService {
             return;
         }
         throw new GeneralException(GeneralErrorCode.FORBIDDEN);
+    }
+
+    private void requireAdminCenterAccess(Consultation c, UserPrincipal principal) {
+        Center center = adminService.getAdminCenter(principal);
+        if (belongsToCenter(c, center)) return;
+        throw new GeneralException(GeneralErrorCode.FORBIDDEN);
+    }
+
+    private boolean belongsToCenter(Consultation c, Center center) {
+        if (c.getInterpreter() != null
+                && c.getInterpreter().getCenter() != null
+                && c.getInterpreter().getCenter().getId().equals(center.getId())) {
+            return true;
+        }
+        return c.getPatient().getPatientCenters().stream()
+                .anyMatch(pc -> pc.getCenter().getId().equals(center.getId()));
     }
 }

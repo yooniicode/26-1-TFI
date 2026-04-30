@@ -7,17 +7,15 @@ import { getRequestedMemberRole, type RequestedMemberRole } from '@/lib/authMeta
 import { createClient } from '@/lib/supabase'
 import CenterSearchSelect from '@/components/center/CenterSearchSelect'
 import type { Gender, Nationality, UserRole, VisaType } from '@/lib/types'
+import { GENDERS, NATIONALITIES, VISA_TYPES, useEnumLabels } from '@/lib/i18n/enumLabels'
+import { useTranslation } from '@/lib/i18n/I18nContext'
 import PasswordInput from '@/components/ui/PasswordInput'
-
-const requestedRoleLabel = (request: RequestedMemberRole) => {
-  if (request.role === 'admin') return '센터 직원'
-  if (request.interpreterRole === 'FREELANCER') return '프리랜서'
-  if (request.interpreterRole === 'STAFF') return '센터 직원'
-  return '통번역가'
-}
+import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 
 export default function AuthCompletePage() {
   const router = useRouter()
+  const { t } = useTranslation()
+  const labels = useEnumLabels()
   const [checking, setChecking] = useState(true)
   const [needsProfile, setNeedsProfile] = useState(false)
   const [pendingRequest, setPendingRequest] = useState<RequestedMemberRole | null>(null)
@@ -36,6 +34,13 @@ export default function AuthCompletePage() {
   const [bootstrapCenterName, setBootstrapCenterName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  function requestedRoleLabel(request: RequestedMemberRole): string {
+    if (request.role === 'admin') return t.auth_complete.role_admin
+    if (request.interpreterRole === 'FREELANCER') return t.auth_complete.role_freelancer
+    if (request.interpreterRole === 'STAFF') return t.auth_complete.role_staff
+    return t.auth_complete.role_interpreter
+  }
 
   useEffect(() => {
     const supabase = createClient()
@@ -97,15 +102,15 @@ export default function AuthCompletePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) { setError('이름을 입력해주세요.'); return }
-    if (role === 'patient' && !phone.trim()) { setError('연락처를 입력해주세요.'); return }
+    if (!name.trim()) { setError(t.auth_complete.err_name); return }
+    if (role === 'patient' && !phone.trim()) { setError(t.auth_complete.err_phone); return }
     if (role === 'interpreter' && !bootstrapCenterId && !bootstrapCenterName.trim()) {
-      setError('근무 센터를 검색해서 선택해주세요.')
+      setError(t.auth_complete.err_center)
       return
     }
     if (isOtpUser && newPassword) {
-      if (newPassword.length < 8) { setError('비밀번호는 8자 이상이어야 합니다.'); return }
-      if (newPassword !== newPasswordConfirm) { setError('비밀번호가 일치하지 않습니다.'); return }
+      if (newPassword.length < 8) { setError(t.auth_complete.err_password_min); return }
+      if (newPassword !== newPasswordConfirm) { setError(t.auth_complete.err_password_confirm); return }
     }
     setLoading(true)
     setError('')
@@ -127,7 +132,7 @@ export default function AuthCompletePage() {
       await createClient().auth.refreshSession()
       router.replace('/dashboard')
     } catch (e) {
-      setError(e instanceof Error ? e.message : '프로필 저장에 실패했습니다.')
+      setError(e instanceof Error ? e.message : t.auth_complete.err_profile_save)
       setLoading(false)
     }
   }
@@ -137,12 +142,12 @@ export default function AuthCompletePage() {
     setError('')
     try {
       if (!bootstrapCode.trim()) {
-        setError('관리자 초기 가입 코드를 입력해주세요.')
+        setError(t.auth_complete.err_bootstrap_code)
         setLoading(false)
         return
       }
       if (!bootstrapCenterName.trim()) {
-        setError('근무 센터를 입력해주세요.')
+        setError(t.auth_complete.err_bootstrap_center)
         setLoading(false)
         return
       }
@@ -151,7 +156,7 @@ export default function AuthCompletePage() {
       router.replace('/dashboard')
       router.refresh()
     } catch (e) {
-      setError(e instanceof Error ? e.message : '최초 센터 직원 계정 생성에 실패했습니다.')
+      setError(e instanceof Error ? e.message : t.auth_complete.err_bootstrap_failed)
       setLoading(false)
     }
   }
@@ -159,7 +164,7 @@ export default function AuthCompletePage() {
   if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-sm text-gray-500">잠시만요...</p>
+        <p className="text-sm text-gray-500">{t.auth_complete.just_a_moment}</p>
       </div>
     )
   }
@@ -168,11 +173,12 @@ export default function AuthCompletePage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="card max-w-sm w-full text-center py-8">
-          <h1 className="text-xl font-bold text-primary-700">승인 대기 중</h1>
+          <div className="mb-4 flex justify-end">
+            <LanguageSwitcher />
+          </div>
+          <h1 className="text-xl font-bold text-primary-700">{t.auth_complete.pending_title}</h1>
           <p className="text-sm text-gray-500 mt-3">
-            {requestedRoleLabel(pendingRequest)} 계정으로 가입 요청이 접수되었습니다.
-            {pendingRequest.centerName ? ` 근무 센터: ${pendingRequest.centerName}.` : ''}
-            센터 직원이 회원 관리에서 권한을 승인하면 이용할 수 있습니다.
+            {t.auth_complete.pending_desc(requestedRoleLabel(pendingRequest), pendingRequest.centerName)}
           </p>
           <div className="mt-6 space-y-2">
             {pendingRequest.role === 'admin' && (
@@ -181,12 +187,12 @@ export default function AuthCompletePage() {
                   className="input text-left"
                   value={bootstrapCenterName}
                   onChange={e => setBootstrapCenterName(e.target.value)}
-                  placeholder="근무 센터"
+                  placeholder={t.auth_complete.bootstrap_center_placeholder}
                 />
                 <PasswordInput
                   value={bootstrapCode}
                   onChange={setBootstrapCode}
-                  placeholder="관리자 초기 가입 코드"
+                  placeholder={t.auth_complete.bootstrap_code_placeholder}
                   className="input text-left"
                 />
                 <button
@@ -195,7 +201,7 @@ export default function AuthCompletePage() {
                   disabled={loading}
                   onClick={handleBootstrapAdmin}
                 >
-                  {loading ? '확인 중...' : '최초 센터 직원 계정 만들기'}
+                  {loading ? t.auth_complete.checking : t.auth_complete.create_admin}
                 </button>
               </>
             )}
@@ -208,7 +214,7 @@ export default function AuthCompletePage() {
                 window.location.reload()
               }}
             >
-              승인 상태 다시 확인
+              {t.auth_complete.recheck}
             </button>
             <button
               type="button"
@@ -218,7 +224,7 @@ export default function AuthCompletePage() {
                 router.replace('/login')
               }}
             >
-              로그아웃
+              {t.auth.logout}
             </button>
           </div>
           {error && <p className="text-xs text-red-500 mt-4">{error}</p>}
@@ -232,16 +238,21 @@ export default function AuthCompletePage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="card max-w-sm w-full">
+        <div className="mb-4 flex justify-end">
+          <LanguageSwitcher />
+        </div>
         <div className="text-center mb-6">
-          <h1 className="text-xl font-bold text-primary-700">프로필 설정</h1>
+          <h1 className="text-xl font-bold text-primary-700">{t.auth_complete.profile_title}</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {role === 'interpreter' ? '통번역가 기본 정보를 입력해주세요.' : '이주민 기본 정보를 입력해주세요.'}
+            {role === 'interpreter'
+              ? t.auth_complete.profile_subtitle_interpreter
+              : t.auth_complete.profile_subtitle_patient}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="label">이름</label>
+            <label className="label">{t.auth_complete.name}</label>
             <input
               type="text"
               className="input"
@@ -252,7 +263,7 @@ export default function AuthCompletePage() {
           </div>
 
           <div>
-            <label className="label">연락처</label>
+            <label className="label">{t.auth_complete.phone}</label>
             <input
               type="text"
               className="input"
@@ -264,10 +275,10 @@ export default function AuthCompletePage() {
 
           {role === 'interpreter' && (
             <div>
-              <label className="label">근무 센터</label>
+              <label className="label">{t.auth_complete.work_center}</label>
               <CenterSearchSelect
                 valueName={bootstrapCenterName}
-                placeholder="센터명, 주소, 전화번호로 검색"
+                placeholder={t.auth_complete.center_search_placeholder}
                 onSelect={(center) => {
                   setBootstrapCenterId(center.id)
                   setBootstrapCenterName(center.name)
@@ -279,46 +290,27 @@ export default function AuthCompletePage() {
           {role === 'patient' && (
             <>
               <div>
-                <label className="label">국적</label>
+                <label className="label">{t.auth_complete.nationality}</label>
                 <select className="input" value={nationality} onChange={e => setNationality(e.target.value as Nationality)}>
-                  <option value="VIETNAM">베트남</option>
-                  <option value="CHINA">중국</option>
-                  <option value="CAMBODIA">캄보디아</option>
-                  <option value="MYANMAR">미얀마</option>
-                  <option value="PHILIPPINES">필리핀</option>
-                  <option value="INDONESIA">인도네시아</option>
-                  <option value="THAILAND">태국</option>
-                  <option value="NEPAL">네팔</option>
-                  <option value="MONGOLIA">몽골</option>
-                  <option value="UZBEKISTAN">우즈베키스탄</option>
-                  <option value="SRI_LANKA">스리랑카</option>
-                  <option value="BANGLADESH">방글라데시</option>
-                  <option value="PAKISTAN">파키스탄</option>
-                  <option value="OTHER">기타</option>
+                  {NATIONALITIES.map(value => (
+                    <option key={value} value={value}>{labels.nationality[value]}</option>
+                  ))}
                 </select>
               </div>
               <div>
-                <label className="label">성별</label>
+                <label className="label">{t.auth_complete.gender}</label>
                 <select className="input" value={gender} onChange={e => setGender(e.target.value as Gender)}>
-                  <option value="MALE">남성</option>
-                  <option value="FEMALE">여성</option>
-                  <option value="OTHER">기타</option>
+                  {GENDERS.map(value => (
+                    <option key={value} value={value}>{labels.gender[value]}</option>
+                  ))}
                 </select>
               </div>
               <div>
-                <label className="label">비자</label>
+                <label className="label">{t.auth_complete.visa}</label>
                 <select className="input" value={visaType} onChange={e => setVisaType(e.target.value as VisaType)}>
-                  <option value="E9">E-9</option>
-                  <option value="E6">E-6</option>
-                  <option value="F1">F-1</option>
-                  <option value="F2">F-2</option>
-                  <option value="F4">F-4</option>
-                  <option value="F5">F-5</option>
-                  <option value="F6">F-6</option>
-                  <option value="H2">H-2</option>
-                  <option value="D2">D-2</option>
-                  <option value="U">미등록</option>
-                  <option value="OTHER">기타</option>
+                  {VISA_TYPES.map(value => (
+                    <option key={value} value={value}>{labels.visa[value]}</option>
+                  ))}
                 </select>
               </div>
             </>
@@ -326,28 +318,30 @@ export default function AuthCompletePage() {
 
           {isOtpUser && (
             <div className="border-t pt-4 space-y-3">
-              <p className="text-xs text-gray-500">비밀번호를 설정하면 이메일/비밀번호로도 로그인할 수 있습니다. 선택 사항입니다.</p>
+              <p className="text-xs text-gray-500">{t.auth_complete.password_optional_desc}</p>
               <div>
-                <label className="label">비밀번호</label>
+                <label className="label">{t.auth_complete.password}</label>
                 <PasswordInput
                   value={newPassword}
                   onChange={setNewPassword}
-                  placeholder="8자 이상"
+                  placeholder={t.auth_complete.password_min_hint}
                   autoComplete="new-password"
                 />
               </div>
               {newPassword && (
                 <div>
-                  <label className="label">비밀번호 확인</label>
+                  <label className="label">{t.auth_complete.password_confirm}</label>
                   <PasswordInput
                     value={newPasswordConfirm}
                     onChange={setNewPasswordConfirm}
-                    placeholder="비밀번호 재입력"
+                    placeholder={t.auth_complete.password_reenter}
                     autoComplete="new-password"
                   />
                   {newPasswordConfirm && (
                     <p className={`text-xs mt-1 ${newPassword === newPasswordConfirm ? 'text-green-600' : 'text-red-500'}`}>
-                      {newPassword === newPasswordConfirm ? '비밀번호가 일치합니다.' : '비밀번호가 일치하지 않습니다.'}
+                      {newPassword === newPasswordConfirm
+                        ? t.auth_complete.password_match
+                        : t.auth_complete.password_no_match}
                     </p>
                   )}
                 </div>
@@ -358,7 +352,7 @@ export default function AuthCompletePage() {
           {error && <p className="text-red-500 text-xs">{error}</p>}
 
           <button type="submit" className="btn-primary w-full" disabled={loading}>
-            {loading ? '저장 중...' : '시작하기'}
+            {loading ? t.auth_complete.starting : t.auth_complete.start}
           </button>
         </form>
       </div>

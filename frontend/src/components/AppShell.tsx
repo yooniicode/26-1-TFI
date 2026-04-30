@@ -14,7 +14,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const { data: me } = useMe()
   const { layoutMode, setLayoutMode } = useLayoutMode()
   const isDesktopMode = layoutMode === 'desktop'
-  const visibleNav = me ? APP_NAV_ITEMS.filter(item => item.roles.includes(me.role)) : []
+  const visibleNav = me && me.role ? APP_NAV_ITEMS.filter(item => item.roles.includes(me.role!)) : []
 
   return (
     <div className={clsx(

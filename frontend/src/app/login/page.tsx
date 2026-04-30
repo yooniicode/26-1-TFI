@@ -5,21 +5,17 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import CenterSearchSelect from '@/components/center/CenterSearchSelect'
 import type { Gender, Nationality, VisaType } from '@/lib/types'
+import { GENDERS, NATIONALITIES, VISA_TYPES, useEnumLabels } from '@/lib/i18n/enumLabels'
+import { useTranslation } from '@/lib/i18n/I18nContext'
 import PasswordInput from '@/components/ui/PasswordInput'
+import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 
 type SignupType = 'patient' | 'admin' | 'interpreter' | 'freelancer'
 
-const authCallbackMessages: Record<string, string> = {
-  auth_link_browser_mismatch:
-    '이 인증 링크는 이미 사용되었거나 현재 브라우저에서 완료할 수 없습니다. 새 인증 메일을 요청한 뒤, 다음 링크는 요청한 브라우저에서 처음 열어주세요.',
-  auth_link_invalid:
-    '인증 링크가 만료되었거나 이미 사용되었습니다. 다시 가입하거나 새 로그인 링크를 요청해주세요.',
-  auth_callback_failed:
-    '이메일 인증을 완료하지 못했습니다. 새 인증 메일을 요청한 뒤 다시 시도해주세요.',
-}
-
 export default function LoginPage() {
   const router = useRouter()
+  const { t } = useTranslation()
+  const labels = useEnumLabels()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -45,11 +41,16 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.search)
     const errorCode = params.get('error')
     if (!errorCode) return
-    setCallbackMessage(authCallbackMessages[errorCode] ?? authCallbackMessages.auth_callback_failed)
+    const msgMap: Record<string, string> = {
+      auth_link_browser_mismatch: t.login.err_browser_mismatch,
+      auth_link_invalid: t.login.err_link_invalid,
+      auth_callback_failed: t.login.err_callback_failed,
+    }
+    setCallbackMessage(msgMap[errorCode] ?? t.login.err_callback_failed)
     setIsSignupMode(false)
     setIsForgotPasswordMode(false)
     window.history.replaceState(null, '', '/login')
-  }, [])
+  }, [t])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -61,34 +62,45 @@ export default function LoginPage() {
   }
 
   async function handleMagicLink() {
-    if (!email) { setError('이메일을 입력해주세요.'); return }
+    if (!email) { setError(t.login.err_email); return }
     setLoading(true); setError('')
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { 
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        shouldCreateUser: false,
+      },
     })
-    if (error) { setError(error.message); setLoading(false); return }
+    
+    if (error) { 
+      if (error.message.includes('Signups not allowed for otp') || error.status === 400) {
+        setIsSignupMode(true)
+        setError(t.login.err_not_found || '가입되지 않은 이메일입니다. 회원가입을 먼저 진행해주세요.')
+      } else {
+        setError(error.message)
+      }
+      setLoading(false); return 
+    }
     setMagicSent(true); setLoading(false)
   }
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) { setError('이름을 입력해주세요.'); return }
-    if (!email) { setError('이메일을 입력해주세요.'); return }
-    if (!signupPassword) { setError('비밀번호를 입력해주세요.'); return }
-    if (signupPassword.length < 8) { setError('비밀번호는 8자 이상이어야 합니다.'); return }
+    if (!name.trim()) { setError(t.login.err_name); return }
+    if (!email) { setError(t.login.err_email); return }
+    if (!signupPassword) { setError(t.login.err_password); return }
+    if (signupPassword.length < 8) { setError(t.login.err_password_min); return }
     if (signupPassword !== signupPasswordConfirm) {
-      setError('비밀번호 확인이 일치하지 않습니다.')
+      setError(t.login.err_password_confirm)
       return
     }
-
     if ((accountType === 'interpreter' || accountType === 'freelancer') && !centerId) {
-      setError('근무 센터를 검색해서 선택해주세요.')
+      setError(t.login.err_center_select)
       return
     }
     if (accountType === 'admin' && !centerName.trim()) {
-      setError('근무 센터를 입력해주세요.')
+      setError(t.login.err_center_input)
       return
     }
 
@@ -144,7 +156,7 @@ export default function LoginPage() {
   async function handleForgotPassword(e?: React.FormEvent) {
     if (e) e.preventDefault()
     if (!email) {
-      setError('이메일을 입력해주세요.')
+      setError(t.login.err_email)
       setIsForgotPasswordMode(true)
       setIsSignupMode(false)
       return
@@ -163,10 +175,8 @@ export default function LoginPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="card max-w-sm w-full text-center py-10">
           <p className="text-4xl mb-4">📧</p>
-          <h2 className="font-bold text-lg mb-2">이메일을 확인해주세요</h2>
-          <p className="text-sm text-gray-500">
-            {email} 로 로그인 링크를 보냈습니다.
-          </p>
+          <h2 className="font-bold text-lg mb-2">{t.login.check_email}</h2>
+          <p className="text-sm text-gray-500">{t.login.magic_link_sent(email)}</p>
         </div>
       </div>
     )
@@ -177,10 +187,8 @@ export default function LoginPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="card max-w-sm w-full text-center py-10">
           <p className="text-4xl mb-4">📧</p>
-          <h2 className="font-bold text-lg mb-2">이메일을 확인해주세요</h2>
-          <p className="text-sm text-gray-500">
-            {email} 로 비밀번호 재설정 링크를 보냈습니다.
-          </p>
+          <h2 className="font-bold text-lg mb-2">{t.login.check_email}</h2>
+          <p className="text-sm text-gray-500">{t.login.reset_sent(email)}</p>
           <button
             type="button"
             className="btn-primary w-full mt-5"
@@ -189,7 +197,7 @@ export default function LoginPage() {
               setIsForgotPasswordMode(false)
             }}
           >
-            로그인 화면으로
+            {t.login.back_to_login}
           </button>
         </div>
       </div>
@@ -201,10 +209,8 @@ export default function LoginPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="card max-w-sm w-full text-center py-10">
           <p className="text-4xl mb-4">✅</p>
-          <h2 className="font-bold text-lg mb-2">회원가입이 완료되었습니다</h2>
-          <p className="text-sm text-gray-500">
-            {email} 로 인증 메일을 보냈습니다. 메일 인증 후 로그인해주세요.
-          </p>
+          <h2 className="font-bold text-lg mb-2">{t.login.signup_done_title}</h2>
+          <p className="text-sm text-gray-500">{t.login.signup_done_msg(email)}</p>
           <button
             type="button"
             className="btn-primary w-full mt-5"
@@ -213,19 +219,29 @@ export default function LoginPage() {
               setIsSignupMode(false)
             }}
           >
-            로그인 화면으로
+            {t.login.back_to_login}
           </button>
         </div>
       </div>
     )
   }
 
+  const accountTypes: { value: SignupType; label: string; desc: string }[] = [
+    { value: 'patient', label: t.login.type_patient, desc: t.login.type_patient_desc },
+    { value: 'admin', label: t.login.type_admin, desc: t.login.type_admin_desc },
+    { value: 'interpreter', label: t.login.type_interpreter, desc: t.login.type_interpreter_desc },
+    { value: 'freelancer', label: t.login.type_freelancer, desc: t.login.type_freelancer_desc },
+  ]
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="card max-w-sm w-full">
+        <div className="mb-4 flex justify-end">
+          <LanguageSwitcher />
+        </div>
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-primary-700">LinkUs</h1>
-          <p className="text-sm text-gray-500 mt-1">통번역 지원 플랫폼</p>
+          <h1 className="text-2xl font-bold text-primary-700">{t.login.app_name}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t.login.subtitle}</p>
         </div>
 
         {callbackMessage && (
@@ -237,20 +253,20 @@ export default function LoginPage() {
         {isForgotPasswordMode ? (
           <form onSubmit={handleForgotPassword} className="space-y-4">
             <div>
-              <p className="text-sm text-gray-600 mb-4 font-medium">가입하신 이메일을 입력하시면 비밀번호 재설정 링크를 보내드립니다.</p>
-              <label className="label">이메일</label>
+              <p className="text-sm text-gray-600 mb-4 font-medium">{t.login.forgot_desc}</p>
+              <label className="label">{t.auth.email}</label>
               <input
                 type="email"
                 className="input"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="이메일 주소"
+                placeholder={t.login.email_placeholder}
                 required
               />
             </div>
             {error && <p className="text-red-500 text-xs">{error}</p>}
             <button type="submit" className="btn-primary w-full" disabled={loading}>
-              {loading ? '전송 중...' : '비밀번호 재설정 메일 보내기'}
+              {loading ? t.login.sending : t.login.forgot_submit}
             </button>
             <div className="mt-3 text-center">
               <button
@@ -258,32 +274,27 @@ export default function LoginPage() {
                 onClick={() => { setError(''); setIsForgotPasswordMode(false) }}
                 className="text-sm text-gray-600 hover:underline"
               >
-                로그인 화면으로 돌아가기
+                {t.login.back_to_login_link}
               </button>
             </div>
           </form>
         ) : isSignupMode ? (
           <form onSubmit={handleSignup} className="space-y-4">
             <div>
-              <label className="label">이름</label>
+              <label className="label">{t.auth.name}</label>
               <input
                 type="text"
                 className="input"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                placeholder="이름"
+                placeholder={t.auth.name}
                 required
               />
             </div>
             <div>
-              <label className="label">가입 유형</label>
+              <label className="label">{t.login.account_type}</label>
               <div className="grid grid-cols-2 gap-2">
-                {([
-                  { value: 'patient', label: '이주민', desc: '의료·법률 통번역 지원이 필요해요' },
-                  { value: 'admin', label: '센터 직원', desc: '승인 후 회원과 배정을 관리해요' },
-                  { value: 'interpreter', label: '통번역가', desc: '승인 후 통번역 업무를 진행해요' },
-                  { value: 'freelancer', label: '프리랜서', desc: '승인 후 프리랜서로 활동해요' },
-                ] satisfies { value: SignupType; label: string; desc: string }[]).map(({ value, label, desc }) => (
+                {accountTypes.map(({ value, label, desc }) => (
                   <button
                     key={value}
                     type="button"
@@ -309,18 +320,18 @@ export default function LoginPage() {
               </div>
             </div>
             <div>
-              <label className="label">이메일</label>
+              <label className="label">{t.auth.email}</label>
               <input
                 type="email"
                 className="input"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="이메일 주소"
+                placeholder={t.login.email_placeholder}
                 required
               />
             </div>
             <div>
-              <label className="label">연락처(선택)</label>
+              <label className="label">{t.login.phone}</label>
               <input
                 type="text"
                 className="input"
@@ -331,7 +342,7 @@ export default function LoginPage() {
             </div>
             {accountType === 'admin' && (
               <div>
-                <label className="label">근무 센터</label>
+                <label className="label">{t.login.work_center}</label>
                 <input
                   type="text"
                   className="input"
@@ -340,99 +351,76 @@ export default function LoginPage() {
                     setCenterName(e.target.value)
                     setCenterId('')
                   }}
-                  placeholder="예: 동행센터"
+                  placeholder={t.login.center_example}
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  같은 센터의 관리자만 가입 요청을 확인하고 승인할 수 있습니다.
-                </p>
+                <p className="text-xs text-gray-500 mt-1">{t.login.center_admin_note}</p>
               </div>
             )}
             {(accountType === 'interpreter' || accountType === 'freelancer') && (
               <div>
-                <label className="label">근무 센터</label>
+                <label className="label">{t.login.work_center}</label>
                 <CenterSearchSelect
                   valueName={centerName}
-                  placeholder="센터명, 주소, 전화번호로 검색"
+                  placeholder={t.login.center_search_placeholder}
                   onSelect={(center) => {
                     setCenterId(center.id)
                     setCenterName(center.name)
                   }}
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  같은 센터의 관리자만 가입 요청을 확인하고 승인할 수 있습니다.
-                </p>
+                <p className="text-xs text-gray-500 mt-1">{t.login.center_admin_note}</p>
               </div>
             )}
             {accountType === 'patient' && (
               <>
                 <div>
-                  <label className="label">국적</label>
+                  <label className="label">{t.login.nationality}</label>
                   <select className="input" value={nationality} onChange={e => setNationality(e.target.value as Nationality)}>
-                    <option value="VIETNAM">베트남</option>
-                    <option value="CHINA">중국</option>
-                    <option value="CAMBODIA">캄보디아</option>
-                    <option value="MYANMAR">미얀마</option>
-                    <option value="PHILIPPINES">필리핀</option>
-                    <option value="INDONESIA">인도네시아</option>
-                    <option value="THAILAND">태국</option>
-                    <option value="NEPAL">네팔</option>
-                    <option value="MONGOLIA">몽골</option>
-                    <option value="UZBEKISTAN">우즈베키스탄</option>
-                    <option value="SRI_LANKA">스리랑카</option>
-                    <option value="BANGLADESH">방글라데시</option>
-                    <option value="PAKISTAN">파키스탄</option>
-                    <option value="OTHER">기타</option>
+                    {NATIONALITIES.map(value => (
+                      <option key={value} value={value}>{labels.nationality[value]}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
-                  <label className="label">성별</label>
+                  <label className="label">{t.login.gender}</label>
                   <select className="input" value={gender} onChange={e => setGender(e.target.value as Gender)}>
-                    <option value="MALE">남</option>
-                    <option value="FEMALE">여</option>
-                    <option value="OTHER">기타</option>
+                    {GENDERS.map(value => (
+                      <option key={value} value={value}>{labels.gender[value]}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
-                  <label className="label">비자</label>
+                  <label className="label">{t.login.visa}</label>
                   <select className="input" value={visaType} onChange={e => setVisaType(e.target.value as VisaType)}>
-                    <option value="E9">E-9</option>
-                    <option value="E6">E-6</option>
-                    <option value="F1">F-1</option>
-                    <option value="F2">F-2</option>
-                    <option value="F4">F-4</option>
-                    <option value="F5">F-5</option>
-                    <option value="F6">F-6</option>
-                    <option value="H2">H-2</option>
-                    <option value="D2">D-2</option>
-                    <option value="U">미등록</option>
-                    <option value="OTHER">기타</option>
+                    {VISA_TYPES.map(value => (
+                      <option key={value} value={value}>{labels.visa[value]}</option>
+                    ))}
                   </select>
                 </div>
               </>
             )}
             <div>
-              <label className="label">비밀번호</label>
+              <label className="label">{t.auth.password}</label>
               <PasswordInput
                 value={signupPassword}
                 onChange={setSignupPassword}
-                placeholder="8자 이상"
+                placeholder={t.login.password_min_hint}
                 required
                 autoComplete="new-password"
               />
             </div>
             <div>
-              <label className="label">비밀번호 확인</label>
+              <label className="label">{t.login.password_confirm}</label>
               <PasswordInput
                 value={signupPasswordConfirm}
                 onChange={setSignupPasswordConfirm}
-                placeholder="비밀번호 재입력"
+                placeholder={t.login.password_reenter}
                 required
                 autoComplete="new-password"
               />
               {signupPasswordConfirm && (
                 <p className={`text-xs mt-1 ${signupPassword === signupPasswordConfirm ? 'text-green-600' : 'text-red-500'}`}>
-                  {signupPassword === signupPasswordConfirm ? '비밀번호가 일치합니다.' : '비밀번호가 일치하지 않습니다.'}
+                  {signupPassword === signupPasswordConfirm ? t.login.password_match : t.login.password_no_match}
                 </p>
               )}
             </div>
@@ -440,29 +428,29 @@ export default function LoginPage() {
             {error && <p className="text-red-500 text-xs">{error}</p>}
 
             <button type="submit" className="btn-primary w-full" disabled={loading}>
-              {loading ? '가입 중...' : '회원가입'}
+              {loading ? t.login.signing_up : t.auth.signup}
             </button>
           </form>
         ) : (
           <>
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="label">이메일</label>
+                <label className="label">{t.auth.email}</label>
                 <input
                   type="email"
                   className="input"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="이메일 주소"
+                  placeholder={t.login.email_placeholder}
                   required
                 />
               </div>
               <div>
-                <label className="label">비밀번호</label>
+                <label className="label">{t.auth.password}</label>
                 <PasswordInput
                   value={password}
                   onChange={setPassword}
-                  placeholder="비밀번호"
+                  placeholder={t.login.password_placeholder}
                   autoComplete="current-password"
                 />
               </div>
@@ -470,7 +458,7 @@ export default function LoginPage() {
               {error && <p className="text-red-500 text-xs">{error}</p>}
 
               <button type="submit" className="btn-primary w-full" disabled={loading}>
-                {loading ? '로그인 중...' : '로그인'}
+                {loading ? t.login.logging_in : t.auth.login}
               </button>
             </form>
 
@@ -481,7 +469,7 @@ export default function LoginPage() {
                 disabled={loading}
                 className="text-sm text-primary-600 hover:underline"
               >
-                이메일 링크로 로그인
+                {t.login.magic_link}
               </button>
               <span className="text-gray-300">|</span>
               <button
@@ -490,7 +478,7 @@ export default function LoginPage() {
                 disabled={loading}
                 className="text-sm text-primary-600 hover:underline"
               >
-                비밀번호 찾기
+                {t.login.forgot_password}
               </button>
             </div>
           </>
@@ -507,7 +495,7 @@ export default function LoginPage() {
                 setIsSignupMode(prev => !prev)
               }}
             >
-              {isSignupMode ? '이미 계정이 있어요 (로그인)' : '회원가입'}
+              {isSignupMode ? t.login.already_have_account : t.auth.signup}
             </button>
           </div>
         )}

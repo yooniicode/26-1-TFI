@@ -19,5 +19,5 @@ export const patientApi = {
   addCenter:    (id: string, centerId: string) =>
     post(`/patients/${id}/centers/${centerId}`, undefined, schemas.patient),
   removeCenter: (id: string, centerId: string) =>
-    del(`/patients/${id}/centers/${centerId}`, schemas.patient),
+    del(`/patients/${id}/centers/${centerId}`),
 }

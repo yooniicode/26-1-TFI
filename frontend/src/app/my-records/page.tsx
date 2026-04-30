@@ -7,9 +7,12 @@ import Spinner from '@/components/ui/Spinner'
 import EmptyState from '@/components/ui/EmptyState'
 import { authApi, patientApi, scriptApi } from '@/lib/api'
 import type { AuthMe, MedicalScript, PatientReport } from '@/lib/types'
-import { SCRIPT_LABEL } from '@/lib/types'
+import { useEnumLabels } from '@/lib/i18n/enumLabels'
+import { useTranslation } from '@/lib/i18n/I18nContext'
 
 export default function MyRecordsPage() {
+  const { t } = useTranslation()
+  const labels = useEnumLabels()
   const [me, setMe] = useState<AuthMe | null>(null)
   const [records, setRecords] = useState<PatientReport[]>([])
   const [scripts, setScripts] = useState<MedicalScript[]>([])
@@ -93,7 +96,7 @@ export default function MyRecordsPage() {
               <div key={s.id} className="card">
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-xs text-primary-600 font-medium">
-                    {SCRIPT_LABEL[s.scriptType]}
+                    {labels.script[s.scriptType]}
                   </span>
                   <span className="text-xs text-gray-400">
                     {new Date(s.createdAt).toLocaleDateString()}

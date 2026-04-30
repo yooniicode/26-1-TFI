@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -42,10 +43,11 @@ public class ConsultationController {
     @PreAuthorize("hasAnyRole('interpreter', 'admin')")
     @Operation(summary = "상담/통역 보고서 목록 조회")
     public ResponseEntity<Response<List<ConsultationResponse.Summary>>> getAll(
-            @PageableDefault(size = 20) Pageable pageable,
+            @RequestParam(required = false) String patientQuery,
+            @PageableDefault(size = 20, sort = "consultationDate", direction = Sort.Direction.DESC) Pageable pageable,
             @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(
-                Response.success(SuccessCode.OK, consultationService.getAll(pageable, principal)));
+                Response.success(SuccessCode.OK, consultationService.getAll(pageable, principal, patientQuery)));
     }
 
     @GetMapping("/{id}")

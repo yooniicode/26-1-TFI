@@ -107,6 +107,7 @@ export interface Consultation {
   patientPhone?: string
   interpreterId?: string
   interpreterName?: string
+  createdByName?: string
   hospitalId?: string
   hospitalName?: string
   department?: string
@@ -186,7 +187,7 @@ export interface MedicalScript {
 
 export interface AuthMe {
   authUserId: string
-  role: UserRole
+  role?: UserRole | null
   name?: string | null
   entityId?: string | null
   centerId?: string | null

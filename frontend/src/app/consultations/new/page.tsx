@@ -6,22 +6,17 @@ import AppShell from '@/components/AppShell'
 import { consultationApi, patientApi, hospitalApi } from '@/lib/api'
 import type { ConsultationMethod, Hospital, IssueType, Patient, ProcessingType } from '@/lib/types'
 import {
-  GENDER_LABEL,
-  ISSUE_LABEL,
-  METHOD_LABEL,
-  NATIONALITY_LABEL,
-  VISA_LABEL,
-} from '@/lib/types'
-
-const processingLabel: Record<ProcessingType, string> = {
-  INTERPRETATION: '통역',
-  TRANSLATION: '번역',
-  COUNSELING: '상담',
-  OTHER: '기타',
-}
+  CONSULTATION_METHODS,
+  ISSUE_TYPES,
+  PROCESSING_TYPES,
+  useEnumLabels,
+} from '@/lib/i18n/enumLabels'
+import { useTranslation } from '@/lib/i18n/I18nContext'
 
 export default function NewConsultationPage() {
   const router = useRouter()
+  const { t } = useTranslation()
+  const labels = useEnumLabels()
   const [patients, setPatients] = useState<Patient[]>([])
   const [hospitals, setHospitals] = useState<Hospital[]>([])
   const [submitting, setSubmitting] = useState(false)
@@ -68,7 +63,7 @@ export default function NewConsultationPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.patientId) { setError('이주민을 선택해주세요.'); return }
+    if (!form.patientId) { setError(t.consultation.err_patient); return }
     setSubmitting(true)
     setError('')
     try {
@@ -82,7 +77,7 @@ export default function NewConsultationPage() {
       })
       router.push('/consultations')
     } catch (e) {
-      setError(e instanceof Error ? e.message : '보고서 저장에 실패했습니다.')
+      setError(e instanceof Error ? e.message : t.consultation.err_save)
       setSubmitting(false)
     }
   }
@@ -91,14 +86,14 @@ export default function NewConsultationPage() {
     <AppShell>
       <div className="flex items-center gap-2 mb-4">
         <button onClick={() => router.back()} className="text-gray-400">←</button>
-        <h1 className="text-lg font-bold">병원 방문 보고서 작성</h1>
+        <h1 className="text-lg font-bold">{t.consultation.new_title}</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-gray-600">기본 정보</h2>
+          <h2 className="text-sm font-semibold text-gray-600">{t.consultation.section_basic}</h2>
           <div>
-            <label className="label">방문 날짜 *</label>
+            <label className="label">{t.consultation.visit_date}</label>
             <input
               type="date"
               className="input"
@@ -109,14 +104,14 @@ export default function NewConsultationPage() {
           </div>
 
           <div>
-            <label className="label">이주민 *</label>
+            <label className="label">{t.consultation.patient}</label>
             <select
               className="input"
               value={form.patientId}
               onChange={e => set('patientId', e.target.value)}
               required
             >
-              <option value="">선택해주세요</option>
+              <option value="">{t.consultation.patient_placeholder}</option>
               {patients.map(p => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
@@ -127,7 +122,7 @@ export default function NewConsultationPage() {
             <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 text-xs text-gray-600">
               <p className="font-medium text-gray-700 mb-1">{selectedPatient.name}</p>
               <p>
-                {NATIONALITY_LABEL[selectedPatient.nationality]} · {GENDER_LABEL[selectedPatient.gender]} · {VISA_LABEL[selectedPatient.visaType]}
+                {labels.nationality[selectedPatient.nationality]} · {labels.gender[selectedPatient.gender]} · {labels.visa[selectedPatient.visaType]}
               </p>
               <p>
                 {[selectedPatient.birthDate, selectedPatient.region, selectedPatient.phone]
@@ -138,13 +133,13 @@ export default function NewConsultationPage() {
           )}
 
           <div>
-            <label className="label">진료 병원</label>
+            <label className="label">{t.consultation.hospital}</label>
             <select
               className="input"
               value={form.hospitalId}
               onChange={e => set('hospitalId', e.target.value)}
             >
-              <option value="">선택</option>
+              <option value="">{t.consultation.hospital_placeholder}</option>
               {hospitals.map(h => (
                 <option key={h.id} value={h.id}>{h.name}</option>
               ))}
@@ -153,16 +148,16 @@ export default function NewConsultationPage() {
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="label">진료과</label>
+              <label className="label">{t.consultation.department}</label>
               <input
                 className="input"
                 value={form.department}
                 onChange={e => set('department', e.target.value)}
-                placeholder="내과, 정형외과"
+                placeholder={t.consultation.department_placeholder}
               />
             </div>
             <div>
-              <label className="label">의사선생님</label>
+              <label className="label">{t.consultation.doctor}</label>
               <input
                 className="input"
                 value={form.doctorName}
@@ -173,34 +168,34 @@ export default function NewConsultationPage() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-gray-600">이주민 열람용 병원 방문 보고서</h2>
+          <h2 className="text-sm font-semibold text-gray-600">{t.consultation.section_patient_report}</h2>
           <div>
-            <label className="label">진단명/질병코드</label>
+            <label className="label">{t.consultation.diagnosis_code}</label>
             <input
               className="input"
               value={form.diagnosisNameCode}
               onChange={e => set('diagnosisNameCode', e.target.value)}
-              placeholder="예: 감기(J00)"
+              placeholder={t.consultation.diagnosis_code_placeholder}
             />
           </div>
           <FieldTextArea
-            label="받은 진단 내용"
+            label={t.consultation.diagnosis_content}
             value={form.diagnosisContent}
             onChange={v => set('diagnosisContent', v)}
           />
           <FieldTextArea
-            label="이주민의 진료 결과"
+            label={t.consultation.treatment_result}
             value={form.treatmentResult}
             onChange={v => set('treatmentResult', v)}
           />
           <FieldTextArea
-            label="처방받은 약 복용"
+            label={t.consultation.medication}
             value={form.medicationInstruction}
             onChange={v => set('medicationInstruction', v)}
-            placeholder="예: 식후 3회, 5일간 복용"
+            placeholder={t.consultation.medication_placeholder}
           />
           <div>
-            <label className="label">다음 진료 일정</label>
+            <label className="label">{t.consultation.next_appointment_date}</label>
             <input
               type="date"
               className="input"
@@ -209,56 +204,56 @@ export default function NewConsultationPage() {
             />
           </div>
           <FieldTextArea
-            label="통번역가가 이주민에게 남기는 코멘트"
+            label={t.consultation.patient_comment}
             value={form.patientComment}
             onChange={v => set('patientComment', v)}
           />
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-gray-600">센터/통번역가용 근무 일지</h2>
+          <h2 className="text-sm font-semibold text-gray-600">{t.consultation.section_work_log}</h2>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="label">병명/문제 유형</label>
+              <label className="label">{t.consultation.issue_type}</label>
               <select
                 className="input"
                 value={form.issueType}
                 onChange={e => set('issueType', e.target.value)}
               >
-                {Object.entries(ISSUE_LABEL).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
+                {ISSUE_TYPES.map(value => (
+                  <option key={value} value={value}>{labels.issue[value]}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="label">통역 방법</label>
+              <label className="label">{t.consultation.interp_method}</label>
               <select
                 className="input"
                 value={form.method}
                 onChange={e => set('method', e.target.value)}
               >
-                <option value="">선택</option>
-                {Object.entries(METHOD_LABEL).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
+                <option value="">{t.consultation.select_placeholder}</option>
+                {CONSULTATION_METHODS.map(value => (
+                  <option key={value} value={value}>{labels.method[value]}</option>
                 ))}
               </select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="label">처리 구분</label>
+              <label className="label">{t.consultation.processing}</label>
               <select
                 className="input"
                 value={form.processing}
                 onChange={e => set('processing', e.target.value)}
               >
-                {Object.entries(processingLabel).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
+                {PROCESSING_TYPES.map(value => (
+                  <option key={value} value={value}>{labels.processing[value]}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="label">상담자</label>
+              <label className="label">{t.consultation.counselor}</label>
               <input
                 className="input"
                 value={form.counselorName}
@@ -268,49 +263,49 @@ export default function NewConsultationPage() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="label">통역 일한 시간</label>
+              <label className="label">{t.consultation.duration}</label>
               <input
                 type="number"
                 step="0.5"
                 className="input"
                 value={form.durationHours}
                 onChange={e => set('durationHours', e.target.value)}
-                placeholder="예: 1.5"
+                placeholder={t.consultation.duration_placeholder}
               />
             </div>
             <div>
-              <label className="label">통역비</label>
+              <label className="label">{t.consultation.fee}</label>
               <input
                 type="number"
                 className="input"
                 value={form.fee}
                 onChange={e => set('fee', e.target.value)}
-                placeholder="예: 50000"
+                placeholder={t.consultation.fee_placeholder}
               />
             </div>
           </div>
           <FieldTextArea
-            label="일한 내역"
+            label={t.consultation.work_description}
             value={form.workDescription}
             onChange={v => set('workDescription', v)}
           />
           <FieldTextArea
-            label="메모"
+            label={t.consultation.memo}
             value={form.memo}
             onChange={v => set('memo', v)}
           />
           <FieldTextArea
-            label="담당의 확인 싸인란"
+            label={t.consultation.doctor_signature}
             value={form.doctorConfirmationSignature}
             onChange={v => set('doctorConfirmationSignature', v)}
-            placeholder="서명 전이면 비워두세요"
+            placeholder={t.consultation.doctor_signature_placeholder}
           />
         </section>
 
         {error && <p className="text-red-500 text-xs">{error}</p>}
 
         <button type="submit" className="btn-primary w-full" disabled={submitting}>
-          {submitting ? '저장 중...' : '두 보고서로 저장'}
+          {submitting ? t.consultation.saving : t.consultation.save_two}
         </button>
       </form>
     </AppShell>

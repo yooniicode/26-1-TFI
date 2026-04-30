@@ -8,11 +8,14 @@ import Badge from '@/components/ui/Badge'
 import Spinner from '@/components/ui/Spinner'
 import { adminApi, patientApi, authApi, handoverApi, centerApi } from '@/lib/api'
 import type { Patient, Consultation, AuthMe, Handover, CenterPatientMemo, Center } from '@/lib/types'
-import { NATIONALITY_LABEL, GENDER_LABEL, VISA_LABEL, ISSUE_LABEL } from '@/lib/types'
+import { useEnumLabels } from '@/lib/i18n/enumLabels'
+import { useTranslation } from '@/lib/i18n/I18nContext'
 
 export default function PatientDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
+  const { t } = useTranslation()
+  const labels = useEnumLabels()
   const [patient, setPatient] = useState<Patient | null>(null)
   const [history, setHistory] = useState<Consultation[]>([])
   const [handovers, setHandovers] = useState<Handover[]>([])
@@ -25,7 +28,6 @@ export default function PatientDetailPage() {
   const [memoSaving, setMemoSaving] = useState(false)
   const [memoError, setMemoError] = useState('')
 
-  // Center search popup state
   const [centerPopupOpen, setCenterPopupOpen] = useState(false)
   const [centerSearchQuery, setCenterSearchQuery] = useState('')
   const [allCenters, setAllCenters] = useState<Center[]>([])
@@ -71,7 +73,7 @@ export default function PatientDetailPage() {
       const res = await adminApi.patientMemos(id)
       setMemos(res.payload ?? [])
     } catch (e) {
-      setMemoError(e instanceof Error ? e.message : '메모 저장에 실패했습니다.')
+      setMemoError(e instanceof Error ? e.message : t.patient.err_memo)
     } finally {
       setMemoSaving(false)
     }
@@ -81,36 +83,45 @@ export default function PatientDetailPage() {
     setCenterActionLoading(centerId)
     try {
       const res = await patientApi.addCenter(id, centerId)
-      setPatient(res.payload)
+      setPatient(res.payload as Patient)
       setCenterPopupOpen(false)
       setCenterSearchQuery('')
     } catch (e) {
-      alert(e instanceof Error ? e.message : '센터 추가에 실패했습니다.')
+      alert(e instanceof Error ? e.message : t.patient.err_center_add)
     } finally {
       setCenterActionLoading(null)
     }
   }
 
   async function handleRemoveCenter(centerId: string) {
-    if (!confirm('이 센터를 삭제하시겠습니까?')) return
+    if (!confirm(t.patient.confirm_center_remove)) return
     setCenterActionLoading(centerId)
     try {
       const res = await patientApi.removeCenter(id, centerId)
-      setPatient(res.payload)
+      setPatient(res.payload as Patient)
     } catch (e) {
-      alert(e instanceof Error ? e.message : '센터 삭제에 실패했습니다.')
+      alert(e instanceof Error ? e.message : t.patient.err_center_remove)
     } finally {
       setCenterActionLoading(null)
     }
   }
 
   if (loading) return <AppShell><Spinner /></AppShell>
-  if (!patient) return <AppShell><p className="text-center py-10 text-gray-400">이주민 정보를 찾을 수 없습니다.</p></AppShell>
+  if (!patient) return <AppShell><p className="text-center py-10 text-gray-400">{t.patient.not_found}</p></AppShell>
 
   const registeredCenterIds = new Set((patient.centers ?? []).map(c => c.id))
   const filteredCenters = allCenters.filter(c =>
     !centerSearchQuery || c.name.toLowerCase().includes(centerSearchQuery.toLowerCase())
   )
+
+  const basicRows: [string, string | undefined | null][] = [
+    [t.patient.nationality, labels.nationality[patient.nationality]],
+    [t.patient.gender, labels.gender[patient.gender]],
+    [t.patient.visa, labels.visa[patient.visaType]],
+    [t.patient.birth_date, patient.birthDate],
+    [t.patient.phone, patient.phone],
+    [t.patient.region, patient.region],
+  ]
 
   return (
     <AppShell>
@@ -119,26 +130,17 @@ export default function PatientDetailPage() {
         <h1 className="text-lg font-bold">{patient.name}</h1>
       </div>
 
-      {/* 기본 정보 */}
       <div className="card mb-4">
-        <h2 className="text-sm font-semibold text-gray-500 mb-3">기본 정보</h2>
-        {[
-          ['국적', NATIONALITY_LABEL[patient.nationality]],
-          ['성별', GENDER_LABEL[patient.gender]],
-          ['비자', VISA_LABEL[patient.visaType]],
-          ['생년월일', patient.birthDate],
-          ['연락처', patient.phone],
-          ['거주지역', patient.region],
-        ].filter(([, v]) => v).map(([label, value]) => (
+        <h2 className="text-sm font-semibold text-gray-500 mb-3">{t.patient.basic_info}</h2>
+        {basicRows.filter(([, v]) => v).map(([label, value]) => (
           <div key={label as string} className="flex gap-2 mb-2">
             <span className="text-xs text-gray-500 w-16 flex-shrink-0">{label}</span>
             <span className="text-sm">{value}</span>
           </div>
         ))}
 
-        {/* 소속 센터 */}
         <div className="flex gap-2 mt-2">
-          <span className="text-xs text-gray-500 w-16 flex-shrink-0 pt-1">소속 센터</span>
+          <span className="text-xs text-gray-500 w-16 flex-shrink-0 pt-1">{t.patient.affiliation_center}</span>
           <div className="flex flex-wrap gap-1 flex-1">
             {(patient.centers ?? []).map(center => (
               <span key={center.id}
@@ -161,35 +163,34 @@ export default function PatientDetailPage() {
                 onClick={() => setCenterPopupOpen(true)}
                 className="text-xs text-gray-400 border border-dashed border-gray-300 rounded-full px-2 py-0.5 hover:border-blue-400 hover:text-blue-500"
               >
-                + 센터 추가
+                {t.patient.add_center}
               </button>
             )}
             {(patient.centers ?? []).length === 0 && me?.role !== 'admin' && (
-              <span className="text-xs text-gray-400">등록된 센터 없음</span>
+              <span className="text-xs text-gray-400">{t.patient.no_center}</span>
             )}
           </div>
         </div>
       </div>
 
-      {/* 센터 검색 팝업 */}
       {centerPopupOpen && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center sm:items-center p-4">
           <div className="bg-white rounded-xl w-full max-w-sm p-4 space-y-3 shadow-xl">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-sm">센터 검색</h3>
+              <h3 className="font-semibold text-sm">{t.patient.center_search_title}</h3>
               <button onClick={() => { setCenterPopupOpen(false); setCenterSearchQuery('') }}
                 className="text-gray-400 text-lg leading-none">×</button>
             </div>
             <input
               className="input"
-              placeholder="센터 이름 검색..."
+              placeholder={t.patient.center_search_placeholder}
               value={centerSearchQuery}
               onChange={e => setCenterSearchQuery(e.target.value)}
               autoFocus
             />
             <div className="max-h-60 overflow-y-auto space-y-1">
               {filteredCenters.length === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-4">검색 결과가 없습니다.</p>
+                <p className="text-xs text-gray-400 text-center py-4">{t.common.no_result}</p>
               ) : filteredCenters.map(center => {
                 const already = registeredCenterIds.has(center.id)
                 return (
@@ -205,8 +206,8 @@ export default function PatientDetailPage() {
                   >
                     <span className="font-medium">{center.name}</span>
                     {center.address && <span className="text-xs text-gray-400 ml-1">{center.address}</span>}
-                    {already && <span className="text-xs text-green-600 ml-1">이미 등록됨</span>}
-                    {centerActionLoading === center.id && <span className="text-xs ml-1">추가 중...</span>}
+                    {already && <span className="text-xs text-green-600 ml-1">{t.patient.already_registered}</span>}
+                    {centerActionLoading === center.id && <span className="text-xs ml-1">{t.patient.adding}</span>}
                   </button>
                 )
               })}
@@ -215,39 +216,38 @@ export default function PatientDetailPage() {
         </div>
       )}
 
-      {/* 퀵 액션 */}
       {me?.role === 'interpreter' && (
         <div className="flex gap-2 mb-4">
           <Link href={`/consultations/new?patientId=${id}`} className="btn-primary flex-1 text-center text-sm">
-            보고서 작성
+            {t.patient.write_report}
           </Link>
           <Link href={`/scripts/patient/${id}`} className="btn-secondary flex-1 text-center text-sm">
-            의료 대본
+            {t.patient.medical_script}
           </Link>
         </div>
       )}
 
-      {/* 담당(매칭) 통번역가 */}
       <section className="mb-4">
-        <h2 className="font-semibold text-sm mb-2">담당했던 통번역가</h2>
+        <h2 className="font-semibold text-sm mb-2">{t.patient.past_interpreters}</h2>
         {Array.from(new Set(history.map(h => h.interpreterName).filter(Boolean))).length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {Array.from(new Set(history.map(h => h.interpreterName).filter(Boolean))).map(name => (
-               <span key={name} className="inline-flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-2 py-0.5 shadow-sm">
-                 {name} 통번역가
-               </span>
+              <span key={name} className="inline-flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full px-2 py-0.5 shadow-sm">
+                {name} {t.patient.interpreter_suffix}
+              </span>
             ))}
           </div>
         ) : (
-          <p className="text-xs text-gray-400">담당했던 이력이 없습니다.</p>
+          <p className="text-xs text-gray-400">{t.patient.no_past_interpreter}</p>
         )}
       </section>
 
-      {/* 상담(보고서) 이력 */}
       <section className="mb-4">
-        <h2 className="font-semibold text-sm mb-2">보고서 (상담) 이력 ({history.length}건)</h2>
+        <h2 className="font-semibold text-sm mb-2">
+          {t.patient.consultation_history} ({history.length}건)
+        </h2>
         {history.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-4">보고서(상담) 기록이 없습니다.</p>
+          <p className="text-sm text-gray-400 text-center py-4">{t.patient.no_consultation}</p>
         ) : (
           <div className="space-y-2">
             {history.map(c => (
@@ -256,12 +256,14 @@ export default function PatientDetailPage() {
                 <div>
                   <p className="text-sm font-medium">{c.consultationDate}</p>
                   <p className="text-xs text-gray-400">
-                    {ISSUE_LABEL[c.issueType]}
+                    {labels.issue[c.issueType]}
                     {c.hospitalName && ` · ${c.hospitalName}`}
-                    {c.interpreterName && ` · 담당: ${c.interpreterName}`}
+                    {c.interpreterName && ` · ${t.patient.in_charge}: ${c.interpreterName}`}
                   </p>
                 </div>
-                {c.confirmed ? <Badge variant="green">확인</Badge> : <Badge variant="yellow">미확인</Badge>}
+                {c.confirmed
+                  ? <Badge variant="green">{t.common.confirmed}</Badge>
+                  : <Badge variant="yellow">{t.common.unconfirmed}</Badge>}
               </Link>
             ))}
           </div>
@@ -270,17 +272,17 @@ export default function PatientDetailPage() {
 
       {(me?.role === 'admin' || me?.role === 'interpreter') && (
         <section className="mb-4">
-          <h2 className="font-semibold text-sm mb-2">센터 메모</h2>
+          <h2 className="font-semibold text-sm mb-2">{t.patient.center_memo}</h2>
 
           {me?.role === 'admin' && (
             <form onSubmit={handleMemoCreate} className="card mb-3 space-y-3">
               <div>
-                <label className="label">공개용 메모</label>
+                <label className="label">{t.patient.public_memo}</label>
                 <textarea
                   className="input min-h-20"
                   value={publicMemo}
                   onChange={e => setPublicMemo(e.target.value)}
-                  placeholder="통번역가에게 공유할 수 있는 메모"
+                  placeholder={t.patient.public_memo_placeholder}
                 />
               </div>
               <label className="flex items-center gap-2 text-sm">
@@ -289,40 +291,40 @@ export default function PatientDetailPage() {
                   checked={interpreterVisible}
                   onChange={e => setInterpreterVisible(e.target.checked)}
                 />
-                통번역가에게 공개
+                {t.patient.interpreter_visible}
               </label>
               <div>
-                <label className="label">비공개 메모</label>
+                <label className="label">{t.patient.private_memo}</label>
                 <textarea
                   className="input min-h-20"
                   value={privateMemo}
                   onChange={e => setPrivateMemo(e.target.value)}
-                  placeholder="센터 관리자만 볼 수 있는 메모"
+                  placeholder={t.patient.private_memo_placeholder}
                 />
               </div>
               {memoError && <p className="text-red-500 text-xs">{memoError}</p>}
               <button type="submit" className="btn-secondary w-full" disabled={memoSaving}>
-                {memoSaving ? '저장 중...' : '센터 메모 저장'}
+                {memoSaving ? t.patient.memo_saving : t.patient.memo_save}
               </button>
             </form>
           )}
 
           {memos.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">센터 메모가 없습니다.</p>
+            <p className="text-sm text-gray-400 text-center py-4">{t.patient.no_memo}</p>
           ) : (
             <div className="space-y-2">
               {memos.map(memo => (
                 <div key={memo.id} className="card text-sm space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs text-gray-400">{new Date(memo.createdAt).toLocaleString()}</p>
+                    <p className="text-xs text-gray-400">{new Date(memo.createdAt).toLocaleString(t.locale)}</p>
                     {memo.interpreterVisible
-                      ? <Badge variant="green">통번역가 공개</Badge>
-                      : <Badge variant="yellow">관리자 전용</Badge>}
+                      ? <Badge variant="green">{t.patient.badge_interpreter_visible}</Badge>
+                      : <Badge variant="yellow">{t.patient.badge_admin_only}</Badge>}
                   </div>
                   {memo.publicMemo && <p className="whitespace-pre-wrap">{memo.publicMemo}</p>}
                   {me?.role === 'admin' && memo.privateMemo && (
                     <div className="rounded bg-gray-50 p-2">
-                      <p className="text-xs text-gray-500 mb-1">비공개 메모</p>
+                      <p className="text-xs text-gray-500 mb-1">{t.patient.private_memo_label}</p>
                       <p className="whitespace-pre-wrap">{memo.privateMemo}</p>
                     </div>
                   )}
@@ -333,15 +335,14 @@ export default function PatientDetailPage() {
         </section>
       )}
 
-      {/* 인수인계 이력 */}
       {handovers.length > 0 && (
         <section className="mb-4">
-          <h2 className="font-semibold text-sm mb-2">인수인계 이력</h2>
+          <h2 className="font-semibold text-sm mb-2">{t.patient.handover_history}</h2>
           <div className="space-y-2">
             {handovers.map(h => (
               <div key={h.id} className="card text-sm">
-                <p className="text-gray-500 text-xs">{new Date(h.createdAt).toLocaleDateString()}</p>
-                <p>{h.fromInterpreterName} → {h.toInterpreterName ?? '(배정 대기)'}</p>
+                <p className="text-gray-500 text-xs">{new Date(h.createdAt).toLocaleDateString(t.locale)}</p>
+                <p>{h.fromInterpreterName} → {h.toInterpreterName ?? t.patient.pending_assignment}</p>
                 <p className="text-xs text-gray-400 mt-1">{h.reason}</p>
               </div>
             ))}

@@ -8,13 +8,16 @@ import { queryKeys } from '@/lib/queryKeys'
 import { createClient } from '@/lib/supabase'
 import { useMe } from '@/hooks/useMe'
 import type { AdminWorkLog, AdminWorkLogTask, Center, Patient, Interpreter, VisaType } from '@/lib/types'
-import { VISA_LABEL } from '@/lib/types'
+import { VISA_TYPES, useEnumLabels } from '@/lib/i18n/enumLabels'
+import { useTranslation } from '@/lib/i18n/I18nContext'
 import Spinner from '@/components/ui/Spinner'
 import PasswordInput from '@/components/ui/PasswordInput'
 
 export default function MyPage() {
   const queryClient = useQueryClient()
+  const { t } = useTranslation()
   const { data: me, isLoading: meLoading } = useMe()
+  const labels = useEnumLabels()
 
   const { data: patient, isLoading: patientLoading } = useQuery({
     queryKey: queryKeys.patients.detail(me?.entityId ?? ''),
@@ -96,7 +99,7 @@ export default function MyPage() {
 
   const { mutate: save, isPending: saving, isSuccess, error: saveError } = useMutation<unknown, Error>({
     mutationFn: () => {
-      if (!me?.entityId) return Promise.reject(new Error('프로필 정보를 불러오지 못했습니다.'))
+      if (!me?.entityId) return Promise.reject(new Error(t.mypage.err_profile))
       if (me.role === 'patient') {
         return patientApi.update(me.entityId, { name: name.trim(), phone, region, visaType, visaNote })
       }
@@ -124,7 +127,7 @@ export default function MyPage() {
   const { mutate: saveCenterInfo, isPending: savingCenterInfo, error: centerSaveError } =
     useMutation<Center, Error>({
       mutationFn: () => {
-        if (!centerName.trim()) return Promise.reject(new Error('센터 이름을 입력해주세요.'))
+        if (!centerName.trim()) return Promise.reject(new Error(t.mypage.err_center_name))
         const body = {
           name: centerName.trim(),
           address: centerAddress.trim() || undefined,
@@ -184,8 +187,8 @@ export default function MyPage() {
     e.preventDefault()
     setPwError('')
     setPwSuccess(false)
-    if (newPassword.length < 8) { setPwError('비밀번호는 8자 이상이어야 합니다.'); return }
-    if (newPassword !== confirmPassword) { setPwError('비밀번호 확인이 일치하지 않습니다.'); return }
+    if (newPassword.length < 8) { setPwError(t.mypage.err_password_min); return }
+    if (newPassword !== confirmPassword) { setPwError(t.mypage.err_password_confirm); return }
     setPwSaving(true)
     const { error } = await createClient().auth.updateUser({ password: newPassword })
     setPwSaving(false)
@@ -211,9 +214,9 @@ export default function MyPage() {
     <AppShell>
       <div className="space-y-6">
         <div>
-          <h1 className="text-xl font-bold">마이페이지</h1>
+          <h1 className="text-xl font-bold">{t.mypage.title}</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            {me?.role === 'admin' ? '센터 직원' : me?.role === 'interpreter' ? '통번역가' : '이주민'} · {me?.name}
+            {me?.role === 'admin' ? t.mypage.role_admin : me?.role === 'interpreter' ? t.mypage.role_interpreter : t.mypage.role_patient} · {me?.name}
           </p>
         </div>
 
@@ -221,72 +224,72 @@ export default function MyPage() {
           <div className="space-y-6">
             <form onSubmit={e => { e.preventDefault(); saveAdminProfile() }} className="space-y-4">
               <div>
-                <label className="label">센터 이름(근무지)</label>
+                <label className="label">{t.mypage.center_name_label}</label>
                 <select className="input mb-2" value={centerId} onChange={e => setCenterId(e.target.value)}>
-                  <option value="">새 센터 직접 입력</option>
+                  <option value="">{t.mypage.center_new_option}</option>
                   {centers.map(center => (
                     <option key={center.id} value={center.id}>{center.name}</option>
                   ))}
                 </select>
-                <input className="input" value={centerName} onChange={e => setCenterName(e.target.value)} placeholder="예: 동행센터" />
+                <input className="input" value={centerName} onChange={e => setCenterName(e.target.value)} placeholder={t.mypage.center_example} />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="label">센터 연락처</label>
-                  <input className="input" value={centerPhone} onChange={e => setCenterPhone(e.target.value)} placeholder="센터 전화번호" />
+                  <label className="label">{t.mypage.center_phone}</label>
+                  <input className="input" value={centerPhone} onChange={e => setCenterPhone(e.target.value)} placeholder={t.mypage.center_phone_placeholder} />
                 </div>
                 <div>
-                  <label className="label">센터 주소</label>
-                  <input className="input" value={centerAddress} onChange={e => setCenterAddress(e.target.value)} placeholder="센터 주소" />
+                  <label className="label">{t.mypage.center_address}</label>
+                  <input className="input" value={centerAddress} onChange={e => setCenterAddress(e.target.value)} placeholder={t.mypage.center_address_placeholder} />
                 </div>
               </div>
               <div>
-                <label className="label">닉네임</label>
-                <input className="input" value={nickname} onChange={e => setNickname(e.target.value)} placeholder="화면에 표시할 이름" />
+                <label className="label">{t.mypage.nickname}</label>
+                <input className="input" value={nickname} onChange={e => setNickname(e.target.value)} placeholder={t.mypage.nickname_placeholder} />
               </div>
               {adminSaveError && <p className="text-red-500 text-xs">{adminSaveError.message}</p>}
               {centerSaveError && <p className="text-red-500 text-xs">{centerSaveError.message}</p>}
-              {adminSaved && <p className="text-green-600 text-xs">관리자 정보가 저장되었습니다.</p>}
+              {adminSaved && <p className="text-green-600 text-xs">{t.mypage.admin_save_success}</p>}
               <button type="button" className="btn-secondary w-full" disabled={savingCenterInfo} onClick={() => saveCenterInfo()}>
-                {savingCenterInfo ? '저장 중...' : centerId ? '센터 정보 수정' : '센터 생성'}
+                {savingCenterInfo ? t.mypage.saving : centerId ? t.mypage.center_update : t.mypage.center_create}
               </button>
               <button type="submit" className="btn-primary w-full" disabled={savingAdminProfile}>
-                {savingAdminProfile ? '저장 중...' : '내 근무 센터/닉네임 저장'}
+                {savingAdminProfile ? t.mypage.saving : t.mypage.admin_save}
               </button>
             </form>
 
             <section className="border-t pt-5 space-y-4">
               <div>
-                <h2 className="font-semibold">센터장 근무일지</h2>
-                <p className="text-xs text-gray-500 mt-1">날짜별 업무 내용을 체크리스트로 정리합니다.</p>
+                <h2 className="font-semibold">{t.mypage.work_log_title}</h2>
+                <p className="text-xs text-gray-500 mt-1">{t.mypage.work_log_desc}</p>
               </div>
 
               <form onSubmit={e => { e.preventDefault(); createWorkLog() }} className="space-y-3">
                 <div>
-                  <label className="label">날짜</label>
+                  <label className="label">{t.mypage.work_date}</label>
                   <input type="date" className="input" value={workDate} onChange={e => setWorkDate(e.target.value)} required />
                 </div>
                 <div>
-                  <label className="label">업무 메모</label>
-                  <textarea className="input min-h-20" value={workMemo} onChange={e => setWorkMemo(e.target.value)} placeholder="오늘 처리한 주요 업무" />
+                  <label className="label">{t.mypage.work_memo}</label>
+                  <textarea className="input min-h-20" value={workMemo} onChange={e => setWorkMemo(e.target.value)} placeholder={t.mypage.work_memo_placeholder} />
                 </div>
                 <div>
-                  <label className="label">체크리스트</label>
+                  <label className="label">{t.mypage.checklist}</label>
                   <textarea
                     className="input min-h-24"
                     value={workTaskLines}
                     onChange={e => setWorkTaskLines(e.target.value)}
-                    placeholder={'한 줄에 하나씩 입력\n예: 신규 이주민 상담\n예: 병원 동행 일정 조율'}
+                    placeholder={t.mypage.checklist_placeholder}
                   />
                 </div>
                 {workLogError && <p className="text-red-500 text-xs">{workLogError.message}</p>}
                 <button type="submit" className="btn-secondary w-full" disabled={creatingWorkLog}>
-                  {creatingWorkLog ? '저장 중...' : '근무일지 저장'}
+                  {creatingWorkLog ? t.mypage.work_log_saving : t.mypage.work_log_save}
                 </button>
               </form>
 
               <div className="space-y-2">
-                {workLogs.length === 0 && <p className="text-sm text-gray-400 text-center py-4">작성된 근무일지가 없습니다.</p>}
+                {workLogs.length === 0 && <p className="text-sm text-gray-400 text-center py-4">{t.mypage.no_work_log}</p>}
                 {workLogs.map(log => (
                   <div key={log.id} className="card space-y-2">
                     <div>
@@ -339,8 +342,8 @@ export default function MyPage() {
                 <div>
                   <label className="label">비자 종류</label>
                   <select className="input" value={visaType} onChange={e => setVisaType(e.target.value as VisaType)}>
-                    {(Object.entries(VISA_LABEL) as [VisaType, string][]).map(([val, label]) => (
-                      <option key={val} value={val}>{label}</option>
+                    {VISA_TYPES.map(value => (
+                      <option key={value} value={value}>{labels.visa[value]}</option>
                     ))}
                   </select>
                 </div>

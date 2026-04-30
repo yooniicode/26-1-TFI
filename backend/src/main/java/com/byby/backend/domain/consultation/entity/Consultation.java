@@ -137,12 +137,19 @@ public class Consultation extends BaseEntity {
         this.confirmedByPhone = confirmedByPhone;
     }
 
-    public void update(String memo, LocalDate nextAppointmentDate, String department,
+    public void update(LocalDate consultationDate, Hospital hospital, IssueType issueType,
+                       ConsultationMethod method, ProcessingType processing,
+                       String memo, LocalDate nextAppointmentDate, String department,
                        String doctorName, String patientComment, String treatmentResult,
                        String diagnosisContent, String diagnosisNameCode,
                        String medicationInstruction, String counselorName,
                        String workDescription, String doctorConfirmationSignature,
                        BigDecimal durationHours, Integer fee) {
+        if (consultationDate != null) this.consultationDate = consultationDate;
+        this.hospital = hospital;
+        if (issueType != null) this.issueType = issueType;
+        this.method = method;
+        this.processing = processing;
         if (memo != null) this.memo = memo;
         if (nextAppointmentDate != null) this.nextAppointmentDate = nextAppointmentDate;
         if (department != null) this.department = department;

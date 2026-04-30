@@ -18,6 +18,40 @@ public interface ConsultationRepository extends JpaRepository<Consultation, UUID
     Page<Consultation> findByPatient(Patient patient, Pageable pageable);
 
     @Query("""
+            SELECT DISTINCT c FROM Consultation c
+            LEFT JOIN c.patient.patientCenters pc
+            LEFT JOIN c.interpreter i
+            WHERE (i.center.id = :centerId OR pc.center.id = :centerId)
+              AND (
+                  :patientQuery IS NULL
+                  OR :patientQuery = ''
+                  OR LOWER(c.patient.name) LIKE LOWER(CONCAT('%', :patientQuery, '%'))
+                  OR LOWER(COALESCE(c.patient.phone, '')) LIKE LOWER(CONCAT('%', :patientQuery, '%'))
+                  OR LOWER(COALESCE(c.patient.region, '')) LIKE LOWER(CONCAT('%', :patientQuery, '%'))
+              )
+            """)
+    Page<Consultation> searchByCenter(
+            @Param("centerId") UUID centerId,
+            @Param("patientQuery") String patientQuery,
+            Pageable pageable);
+
+    @Query("""
+            SELECT c FROM Consultation c
+            WHERE c.interpreter.id = :interpreterId
+              AND (
+                  :patientQuery IS NULL
+                  OR :patientQuery = ''
+                  OR LOWER(c.patient.name) LIKE LOWER(CONCAT('%', :patientQuery, '%'))
+                  OR LOWER(COALESCE(c.patient.phone, '')) LIKE LOWER(CONCAT('%', :patientQuery, '%'))
+                  OR LOWER(COALESCE(c.patient.region, '')) LIKE LOWER(CONCAT('%', :patientQuery, '%'))
+              )
+            """)
+    Page<Consultation> searchByInterpreter(
+            @Param("interpreterId") UUID interpreterId,
+            @Param("patientQuery") String patientQuery,
+            Pageable pageable);
+
+    @Query("""
             SELECT c FROM Consultation c
             WHERE c.interpreter.id = :interpreterId
             ORDER BY c.consultationDate DESC

@@ -8,10 +8,13 @@ import Spinner from '@/components/ui/Spinner'
 import EmptyState from '@/components/ui/EmptyState'
 import { interpreterApi } from '@/lib/api'
 import { queryKeys } from '@/lib/queryKeys'
-import { INTERPRETER_ROLE_LABEL } from '@/lib/types'
+import { useEnumLabels } from '@/lib/i18n/enumLabels'
+import { useTranslation } from '@/lib/i18n/I18nContext'
 
 export default function InterpretersPage() {
   const queryClient = useQueryClient()
+  const { t } = useTranslation()
+  const labels = useEnumLabels()
   const [query, setQuery] = useState('')
   const [submittedQuery, setSubmittedQuery] = useState('')
 
@@ -28,14 +31,14 @@ export default function InterpretersPage() {
   })
 
   function handleDeactivate(id: string, name: string) {
-    if (!confirm(`${name} 통번역가를 비활성화하시겠습니까?`)) return
+    if (!confirm(t.interpreter.confirm_deactivate(name))) return
     deactivate(id)
   }
 
   return (
     <AppShell>
       <div className="space-y-4">
-        <h1 className="text-lg font-bold">통번역가 관리</h1>
+        <h1 className="text-lg font-bold">{t.interpreter.title}</h1>
 
         <form
           onSubmit={(e) => {
@@ -48,15 +51,15 @@ export default function InterpretersPage() {
             className="input flex-1"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="이름, 연락처, 언어 검색"
+            placeholder={t.interpreter.search_placeholder}
           />
-          <button type="submit" className="btn-secondary shrink-0">검색</button>
+          <button type="submit" className="btn-secondary shrink-0">{t.common.search}</button>
         </form>
 
         {isLoading ? (
           <Spinner />
         ) : items.length === 0 ? (
-          <EmptyState message="등록된 통번역가가 없습니다." />
+          <EmptyState message={t.interpreter.empty} />
         ) : (
           <div className="space-y-2">
             {items.map(i => (
@@ -65,12 +68,12 @@ export default function InterpretersPage() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-sm truncate">{i.name}</p>
-                      {!i.active && <Badge variant="red">비활성</Badge>}
+                      {!i.active && <Badge variant="red">{t.interpreter.inactive}</Badge>}
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {INTERPRETER_ROLE_LABEL[i.role]} · {i.languages.join(', ') || '언어 미등록'}
+                      {labels.interpreterRole[i.role]} · {i.languages.join(', ') || t.interpreter.no_language}
                     </p>
-                    {i.centerName && <p className="text-xs text-gray-400">근무 센터: {i.centerName}</p>}
+                    {i.centerName && <p className="text-xs text-gray-400">{t.interpreter.work_center}: {i.centerName}</p>}
                     {i.phone && <p className="text-xs text-gray-400">{i.phone}</p>}
                   </div>
                   {i.active && (
@@ -78,7 +81,7 @@ export default function InterpretersPage() {
                       onClick={() => handleDeactivate(i.id, i.name)}
                       className="text-xs text-red-500 hover:text-red-700 shrink-0"
                     >
-                      비활성화
+                      {t.interpreter.deactivate}
                     </button>
                   )}
                 </div>

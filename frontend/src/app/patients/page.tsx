@@ -9,7 +9,8 @@ import Badge from '@/components/ui/Badge'
 import { patientApi } from '@/lib/api'
 import { useMe } from '@/hooks/useMe'
 import type { Gender, Nationality, Patient, VisaType } from '@/lib/types'
-import { NATIONALITY_LABEL, GENDER_LABEL, VISA_LABEL } from '@/lib/types'
+import { GENDERS, NATIONALITIES, VISA_TYPES, useEnumLabels } from '@/lib/i18n/enumLabels'
+import { useTranslation } from '@/lib/i18n/I18nContext'
 
 interface CreatePatientForm {
   name: string
@@ -33,15 +34,10 @@ const initialForm: CreatePatientForm = {
   visaNote: '',
 }
 
-const nationalities: Nationality[] = [
-  'VIETNAM','CHINA','CAMBODIA','MYANMAR','PHILIPPINES','INDONESIA','THAILAND',
-  'NEPAL','MONGOLIA','UZBEKISTAN','SRI_LANKA','BANGLADESH','PAKISTAN','OTHER',
-]
-const genders: Gender[] = ['MALE','FEMALE','OTHER']
-const visas: VisaType[] = ['E9','E6','F1','F2','F4','F5','F6','H2','D2','U','OTHER']
-
 export default function PatientsPage() {
   const { data: me } = useMe()
+  const { t } = useTranslation()
+  const labels = useEnumLabels()
   const [items, setItems] = useState<Patient[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
@@ -66,7 +62,7 @@ export default function PatientsPage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.name.trim()) { setError('이름을 입력해주세요.'); return }
+    if (!form.name.trim()) { setError(t.patient.err_name); return }
     setSaving(true)
     setError('')
     try {
@@ -84,7 +80,7 @@ export default function PatientsPage() {
       setShowCreate(false)
       setSubmittedQuery(query.trim())
     } catch (e) {
-      setError(e instanceof Error ? e.message : '이주민 등록에 실패했습니다.')
+      setError(e instanceof Error ? e.message : t.patient.err_register)
     } finally {
       setSaving(false)
     }
@@ -95,11 +91,9 @@ export default function PatientsPage() {
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-lg font-bold">이주민 목록</h1>
+            <h1 className="text-lg font-bold">{t.patient.list_title}</h1>
             {me?.role === 'interpreter' && (
-              <p className="text-xs text-gray-500 mt-1">
-                센터장이 매칭 승인한 이주민만 검색됩니다.
-              </p>
+              <p className="text-xs text-gray-500 mt-1">{t.patient.interpreter_search_note}</p>
             )}
           </div>
           {me?.role === 'admin' && (
@@ -108,7 +102,7 @@ export default function PatientsPage() {
               className="btn-primary text-sm shrink-0"
               onClick={() => setShowCreate(prev => !prev)}
             >
-              이주민 등록
+              {t.patient.register}
             </button>
           )}
         </div>
@@ -124,15 +118,15 @@ export default function PatientsPage() {
             className="input flex-1"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="이름, 연락처, 지역 검색"
+            placeholder={t.patient.search_placeholder}
           />
-          <button type="submit" className="btn-secondary shrink-0">검색</button>
+          <button type="submit" className="btn-secondary shrink-0">{t.common.search}</button>
         </form>
 
         {showCreate && me?.role === 'admin' && (
           <form onSubmit={handleCreate} className="card space-y-3">
             <div>
-              <label className="label">이름</label>
+              <label className="label">{t.patient.name}</label>
               <input
                 className="input"
                 value={form.name}
@@ -142,39 +136,39 @@ export default function PatientsPage() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="label">국적</label>
+                <label className="label">{t.patient.nationality}</label>
                 <select
                   className="input"
                   value={form.nationality}
                   onChange={e => setForm(prev => ({ ...prev, nationality: e.target.value as Nationality }))}
                 >
-                  {nationalities.map(n => <option key={n} value={n}>{NATIONALITY_LABEL[n]}</option>)}
+                  {NATIONALITIES.map(value => <option key={value} value={value}>{labels.nationality[value]}</option>)}
                 </select>
               </div>
               <div>
-                <label className="label">성별</label>
+                <label className="label">{t.patient.gender}</label>
                 <select
                   className="input"
                   value={form.gender}
                   onChange={e => setForm(prev => ({ ...prev, gender: e.target.value as Gender }))}
                 >
-                  {genders.map(g => <option key={g} value={g}>{GENDER_LABEL[g]}</option>)}
+                  {GENDERS.map(value => <option key={value} value={value}>{labels.gender[value]}</option>)}
                 </select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="label">비자</label>
+                <label className="label">{t.patient.visa}</label>
                 <select
                   className="input"
                   value={form.visaType}
                   onChange={e => setForm(prev => ({ ...prev, visaType: e.target.value as VisaType }))}
                 >
-                  {visas.map(v => <option key={v} value={v}>{VISA_LABEL[v]}</option>)}
+                  {VISA_TYPES.map(value => <option key={value} value={value}>{labels.visa[value]}</option>)}
                 </select>
               </div>
               <div>
-                <label className="label">생년월일</label>
+                <label className="label">{t.patient.birth_date}</label>
                 <input
                   type="date"
                   className="input"
@@ -184,7 +178,7 @@ export default function PatientsPage() {
               </div>
             </div>
             <div>
-              <label className="label">연락처</label>
+              <label className="label">{t.patient.phone}</label>
               <input
                 className="input"
                 value={form.phone}
@@ -193,7 +187,7 @@ export default function PatientsPage() {
               />
             </div>
             <div>
-              <label className="label">지역</label>
+              <label className="label">{t.patient.region}</label>
               <input
                 className="input"
                 value={form.region}
@@ -201,7 +195,7 @@ export default function PatientsPage() {
               />
             </div>
             <div>
-              <label className="label">비자 메모</label>
+              <label className="label">{t.patient.visa_note}</label>
               <textarea
                 className="input min-h-20"
                 value={form.visaNote}
@@ -211,10 +205,10 @@ export default function PatientsPage() {
             {error && <p className="text-red-500 text-xs">{error}</p>}
             <div className="grid grid-cols-2 gap-2">
               <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>
-                취소
+                {t.common.cancel}
               </button>
               <button type="submit" className="btn-primary" disabled={saving}>
-                {saving ? '저장 중...' : '저장'}
+                {saving ? t.common.saving : t.common.save}
               </button>
             </div>
           </form>
@@ -224,11 +218,7 @@ export default function PatientsPage() {
           <Spinner />
         ) : items.length === 0 ? (
           <EmptyState
-            message={
-              me?.role === 'interpreter'
-                ? '현재 매칭된 이주민이 없습니다.'
-                : '등록된 이주민이 없습니다.'
-            }
+            message={me?.role === 'interpreter' ? t.patient.empty_interpreter : t.patient.empty}
           />
         ) : (
           <div className="space-y-2">
@@ -242,12 +232,12 @@ export default function PatientsPage() {
                   <div className="min-w-0">
                     <p className="font-medium text-sm truncate">{p.name}</p>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {NATIONALITY_LABEL[p.nationality]} · {GENDER_LABEL[p.gender]} · {VISA_LABEL[p.visaType]}
+                      {labels.nationality[p.nationality]} · {labels.gender[p.gender]} · {labels.visa[p.visaType]}
                     </p>
                     {p.region && <p className="text-xs text-gray-400">{p.region}</p>}
                   </div>
                   <Badge variant={p.accountLinked ? 'green' : 'yellow'}>
-                    {p.accountLinked ? '계정 연결' : '계정 미연결'}
+                    {p.accountLinked ? t.patient.account_linked : t.patient.account_unlinked}
                   </Badge>
                 </div>
               </Link>

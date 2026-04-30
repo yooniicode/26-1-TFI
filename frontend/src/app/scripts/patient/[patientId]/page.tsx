@@ -6,19 +6,22 @@ import Link from 'next/link'
 import AppShell from '@/components/AppShell'
 import Spinner from '@/components/ui/Spinner'
 import { scriptApi, patientApi, consultationApi } from '@/lib/api'
-import type { MedicalScript, Patient, Consultation } from '@/lib/types'
-import { SCRIPT_LABEL } from '@/lib/types'
+import type { MedicalScript, Patient, Consultation, ScriptType } from '@/lib/types'
+import { SCRIPT_TYPES, useEnumLabels } from '@/lib/i18n/enumLabels'
+import { useTranslation } from '@/lib/i18n/I18nContext'
 
 export default function ScriptGeneratePage() {
   const { patientId } = useParams<{ patientId: string }>()
   const router = useRouter()
+  const { t } = useTranslation()
+  const labels = useEnumLabels()
   const [patient, setPatient] = useState<Patient | null>(null)
   const [consultations, setConsultations] = useState<Consultation[]>([])
   const [scripts, setScripts] = useState<MedicalScript[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [form, setForm] = useState({
-    scriptType: 'GENERAL',
+    scriptType: 'GENERAL' as ScriptType,
     consultationId: '',
     additionalContext: '',
   })
@@ -38,7 +41,7 @@ export default function ScriptGeneratePage() {
       setPatient(pRes.payload)
       setConsultations(cRes.payload ?? [])
     }).finally(() => setLoading(false))
-  }, [patientId])
+  }, [patientId, loadScripts])
 
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault()
@@ -75,9 +78,10 @@ export default function ScriptGeneratePage() {
         <div>
           <label className="label">대본 유형</label>
           <select className="input" value={form.scriptType}
-            onChange={e => setForm(f => ({ ...f, scriptType: e.target.value }))}>
-            <option value="GENERAL">일반 진료</option>
-            <option value="EMERGENCY">응급 상황</option>
+            onChange={e => setForm(f => ({ ...f, scriptType: e.target.value as ScriptType }))}>
+            {SCRIPT_TYPES.map(value => (
+              <option key={value} value={value}>{labels.script[value]}</option>
+            ))}
           </select>
         </div>
         <div>
@@ -115,7 +119,7 @@ export default function ScriptGeneratePage() {
             <div key={s.id} className="card">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-medium text-primary-600">
-                  {SCRIPT_LABEL[s.scriptType]}
+                  {labels.script[s.scriptType]}
                 </span>
                 <span className="text-xs text-gray-400">
                   {new Date(s.createdAt).toLocaleDateString()}

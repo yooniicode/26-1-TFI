@@ -81,6 +81,7 @@ export const consultationSchema = z.object({
   patientPhone:        nullableString,
   interpreterId:       nullableUuid,
   interpreterName:     nullableString,
+  createdByName:       nullableString,
   hospitalId:          nullableUuid,
   hospitalName:        nullableString,
   department:          nullableString,
@@ -160,7 +161,7 @@ export const medicalScriptSchema = z.object({
 
 export const authMeSchema = z.object({
   authUserId: z.string(),
-  role:       userRoleSchema,
+  role:       userRoleSchema.nullable().optional(),
   name:       z.string().nullable().optional(),
   entityId:   z.string().uuid().nullable().optional(),
   centerId:   z.string().uuid().nullable().optional(),

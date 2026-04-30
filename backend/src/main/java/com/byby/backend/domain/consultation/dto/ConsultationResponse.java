@@ -22,6 +22,7 @@ public class ConsultationResponse {
             String patientName,
             UUID interpreterId,
             String interpreterName,
+            String createdByName,
             String hospitalName,
             IssueType issueType,
             boolean confirmed,
@@ -32,6 +33,7 @@ public class ConsultationResponse {
                     c.getId(), c.getConsultationDate(),
                     c.getPatient().getId(), c.getPatient().getName(),
                     c.getInterpreter() != null ? c.getInterpreter().getId() : null,
+                    c.getInterpreter() != null ? c.getInterpreter().getName() : null,
                     c.getInterpreter() != null ? c.getInterpreter().getName() : null,
                     c.getHospital() != null ? c.getHospital().getName() : null,
                     c.getIssueType(), c.isConfirmed(), c.getCreatedAt());
@@ -51,6 +53,7 @@ public class ConsultationResponse {
             String patientPhone,
             UUID interpreterId,
             String interpreterName,
+            String createdByName,
             UUID hospitalId,
             String hospitalName,
             String department,
@@ -73,6 +76,7 @@ public class ConsultationResponse {
             LocalDate confirmedAt,
             String confirmedBy,
             String confirmedByPhone,
+            boolean confirmed,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
@@ -88,6 +92,7 @@ public class ConsultationResponse {
                     c.getPatient().getPhone(),
                     c.getInterpreter() != null ? c.getInterpreter().getId() : null,
                     c.getInterpreter() != null ? c.getInterpreter().getName() : null,
+                    c.getInterpreter() != null ? c.getInterpreter().getName() : null,
                     c.getHospital() != null ? c.getHospital().getId() : null,
                     c.getHospital() != null ? c.getHospital().getName() : null,
                     c.getDepartment(), c.getDoctorName(), c.getIssueType(), c.getMethod(), c.getProcessing(),
@@ -96,6 +101,7 @@ public class ConsultationResponse {
                     c.getMedicationInstruction(), c.getCounselorName(), c.getWorkDescription(),
                     c.getDoctorConfirmationSignature(), c.getDurationHours(), c.getFee(), c.getNextAppointmentDate(),
                     c.getConfirmedAt(), c.getConfirmedBy(), c.getConfirmedByPhone(),
+                    c.isConfirmed(),
                     c.getCreatedAt(), c.getUpdatedAt());
         }
     }

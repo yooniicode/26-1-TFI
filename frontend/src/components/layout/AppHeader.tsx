@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import clsx from 'clsx'
 import LayoutModeToggle from './LayoutModeToggle'
+import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 import type { LayoutMode } from '@/hooks/useLayoutMode'
 import type { AuthMe } from '@/lib/types'
 
@@ -29,6 +30,7 @@ export default function AppHeader({ me, layoutMode, onLayoutModeChange }: AppHea
             {me.name ?? me.role}
           </span>
         )}
+        <LanguageSwitcher />
         <LayoutModeToggle mode={layoutMode} onChange={onLayoutModeChange} />
         <Link href="/mypage" className="flex flex-col gap-1 p-1 rounded hover:bg-gray-100 transition-colors shrink-0" aria-label="마이페이지">
           <span className="block w-5 h-0.5 bg-gray-600 rounded" />
