@@ -4,6 +4,7 @@ import type { RegisterProfileRequest, UpdateMemberRoleRequest } from '../types'
 
 export const authApi = {
   me:              () => get('/auth/me', schemas.authMe),
+  completeSignup:  () => post<void>('/auth/complete-signup', undefined),
   registerProfile: (body: RegisterProfileRequest) => post<void>('/auth/register-profile', body),
   bootstrapAdmin:  (secretCode: string, centerName?: string) =>
     post('/auth/bootstrap-admin', { secretCode, centerName }, schemas.authMe),

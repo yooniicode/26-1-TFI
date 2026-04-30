@@ -1,12 +1,22 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import CenterSearchSelect from '@/components/center/CenterSearchSelect'
 import type { Gender, Nationality, VisaType } from '@/lib/types'
 import PasswordInput from '@/components/ui/PasswordInput'
 
 type SignupType = 'patient' | 'admin' | 'interpreter' | 'freelancer'
+
+const authCallbackMessages: Record<string, string> = {
+  auth_link_browser_mismatch:
+    '이 인증 링크는 이미 사용되었거나 현재 브라우저에서 완료할 수 없습니다. 새 인증 메일을 요청한 뒤, 다음 링크는 요청한 브라우저에서 처음 열어주세요.',
+  auth_link_invalid:
+    '인증 링크가 만료되었거나 이미 사용되었습니다. 다시 가입하거나 새 로그인 링크를 요청해주세요.',
+  auth_callback_failed:
+    '이메일 인증을 완료하지 못했습니다. 새 인증 메일을 요청한 뒤 다시 시도해주세요.',
+}
 
 export default function LoginPage() {
   const router = useRouter()
@@ -20,14 +30,26 @@ export default function LoginPage() {
   const [gender, setGender] = useState<Gender>('OTHER')
   const [visaType, setVisaType] = useState<VisaType>('OTHER')
   const [phone, setPhone] = useState('')
+  const [centerId, setCenterId] = useState('')
   const [centerName, setCenterName] = useState('')
   const [isSignupMode, setIsSignupMode] = useState(false)
   const [isForgotPasswordMode, setIsForgotPasswordMode] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [callbackMessage, setCallbackMessage] = useState('')
   const [magicSent, setMagicSent] = useState(false)
   const [resetSent, setResetSent] = useState(false)
   const [signupDone, setSignupDone] = useState(false)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const errorCode = params.get('error')
+    if (!errorCode) return
+    setCallbackMessage(authCallbackMessages[errorCode] ?? authCallbackMessages.auth_callback_failed)
+    setIsSignupMode(false)
+    setIsForgotPasswordMode(false)
+    window.history.replaceState(null, '', '/login')
+  }, [])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -61,6 +83,15 @@ export default function LoginPage() {
       return
     }
 
+    if ((accountType === 'interpreter' || accountType === 'freelancer') && !centerId) {
+      setError('근무 센터를 검색해서 선택해주세요.')
+      return
+    }
+    if (accountType === 'admin' && !centerName.trim()) {
+      setError('근무 센터를 입력해주세요.')
+      return
+    }
+
     setLoading(true); setError('')
     const supabase = createClient()
     const requestedRole = accountType === 'admin'
@@ -82,7 +113,14 @@ export default function LoginPage() {
           name: name.trim(),
           phone,
           requested_role: requestedRole,
-          ...(accountType !== 'patient' ? { requested_center_name: centerName.trim() } : {}),
+          ...(accountType !== 'patient'
+            ? {
+                requested_center_name: centerName.trim(),
+                ...((accountType === 'interpreter' || accountType === 'freelancer') && centerId
+                  ? { requested_center_id: centerId }
+                  : {}),
+              }
+            : {}),
           ...(requestedInterpreterRole ? { requested_interpreter_role: requestedInterpreterRole } : {}),
           ...(accountType === 'patient' ? {
             nationality,
@@ -190,6 +228,12 @@ export default function LoginPage() {
           <p className="text-sm text-gray-500 mt-1">통번역 지원 플랫폼</p>
         </div>
 
+        {callbackMessage && (
+          <div role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs leading-relaxed text-red-700">
+            {callbackMessage}
+          </div>
+        )}
+
         {isForgotPasswordMode ? (
           <form onSubmit={handleForgotPassword} className="space-y-4">
             <div>
@@ -243,7 +287,13 @@ export default function LoginPage() {
                   <button
                     key={value}
                     type="button"
-                    onClick={() => setAccountType(value)}
+                    onClick={() => {
+                      setAccountType(value)
+                      if (value === 'patient') {
+                        setCenterId('')
+                        setCenterName('')
+                      }
+                    }}
                     className={`rounded-lg border-2 p-3 text-left transition-colors ${
                       accountType === value
                         ? 'border-primary-600 bg-primary-50'
@@ -279,16 +329,35 @@ export default function LoginPage() {
                 placeholder="010-0000-0000"
               />
             </div>
-            {accountType !== 'patient' && (
+            {accountType === 'admin' && (
               <div>
                 <label className="label">근무 센터</label>
                 <input
                   type="text"
                   className="input"
                   value={centerName}
-                  onChange={e => setCenterName(e.target.value)}
+                  onChange={e => {
+                    setCenterName(e.target.value)
+                    setCenterId('')
+                  }}
                   placeholder="예: 동행센터"
                   required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  같은 센터의 관리자만 가입 요청을 확인하고 승인할 수 있습니다.
+                </p>
+              </div>
+            )}
+            {(accountType === 'interpreter' || accountType === 'freelancer') && (
+              <div>
+                <label className="label">근무 센터</label>
+                <CenterSearchSelect
+                  valueName={centerName}
+                  placeholder="센터명, 주소, 전화번호로 검색"
+                  onSelect={(center) => {
+                    setCenterId(center.id)
+                    setCenterName(center.name)
+                  }}
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   같은 센터의 관리자만 가입 요청을 확인하고 승인할 수 있습니다.

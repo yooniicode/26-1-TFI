@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { authApi } from '@/lib/api'
 import { getRequestedMemberRole, type RequestedMemberRole } from '@/lib/authMetadata'
 import { createClient } from '@/lib/supabase'
+import CenterSearchSelect from '@/components/center/CenterSearchSelect'
 import type { Gender, Nationality, UserRole, VisaType } from '@/lib/types'
 import PasswordInput from '@/components/ui/PasswordInput'
 
@@ -31,6 +32,7 @@ export default function AuthCompletePage() {
   const [newPassword, setNewPassword] = useState('')
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('')
   const [bootstrapCode, setBootstrapCode] = useState('')
+  const [bootstrapCenterId, setBootstrapCenterId] = useState('')
   const [bootstrapCenterName, setBootstrapCenterName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -48,6 +50,8 @@ export default function AuthCompletePage() {
       const requestedMemberRole = getRequestedMemberRole(metadata)
       if (typeof metadata.name === 'string') setName(metadata.name)
       if (typeof metadata.phone === 'string') setPhone(metadata.phone)
+      if (typeof metadata.requested_center_id === 'string') setBootstrapCenterId(metadata.requested_center_id)
+      if (typeof metadata.center_id === 'string') setBootstrapCenterId(metadata.center_id)
       if (typeof metadata.requested_center_name === 'string') setBootstrapCenterName(metadata.requested_center_name)
 
       try {
@@ -56,18 +60,27 @@ export default function AuthCompletePage() {
         setIsOtpUser(payload.amr?.some((a: { method: string }) => a.method === 'otp') ?? false)
       } catch { /* ignore decode errors */ }
 
-      authApi.me()
+      const completeSignup = requestedMemberRole
+        ? authApi.completeSignup().catch(() => undefined)
+        : Promise.resolve()
+
+      completeSignup
+        .then(() => authApi.me())
         .then((res) => {
           if (res.payload.role === 'admin') {
             router.replace('/dashboard')
             return
           }
-          if (res.payload.role === 'interpreter') setRole('interpreter')
-          if (res.payload.role === 'patient' && requestedMemberRole) {
+          if (requestedMemberRole) {
+            if (res.payload.role === 'interpreter' && res.payload.entityId) {
+              router.replace('/dashboard')
+              return
+            }
             setPendingRequest(requestedMemberRole)
             setNeedsProfile(false)
             return
           }
+          if (res.payload.role === 'interpreter') setRole('interpreter')
           if (res.payload?.entityId) {
             router.replace('/dashboard')
           } else {
@@ -86,6 +99,10 @@ export default function AuthCompletePage() {
     e.preventDefault()
     if (!name.trim()) { setError('이름을 입력해주세요.'); return }
     if (role === 'patient' && !phone.trim()) { setError('연락처를 입력해주세요.'); return }
+    if (role === 'interpreter' && !bootstrapCenterId && !bootstrapCenterName.trim()) {
+      setError('근무 센터를 검색해서 선택해주세요.')
+      return
+    }
     if (isOtpUser && newPassword) {
       if (newPassword.length < 8) { setError('비밀번호는 8자 이상이어야 합니다.'); return }
       if (newPassword !== newPasswordConfirm) { setError('비밀번호가 일치하지 않습니다.'); return }
@@ -101,6 +118,7 @@ export default function AuthCompletePage() {
         gender: role === 'patient' ? gender : undefined,
         visaType: role === 'patient' ? visaType : undefined,
         interpreterRole: role === 'interpreter' ? 'FREELANCER' : undefined,
+        centerId: role === 'interpreter' ? bootstrapCenterId || undefined : undefined,
         centerName: role === 'interpreter' ? bootstrapCenterName.trim() || undefined : undefined,
       })
       if (isOtpUser && newPassword) {
@@ -243,6 +261,20 @@ export default function AuthCompletePage() {
               placeholder="010-0000-0000"
             />
           </div>
+
+          {role === 'interpreter' && (
+            <div>
+              <label className="label">근무 센터</label>
+              <CenterSearchSelect
+                valueName={bootstrapCenterName}
+                placeholder="센터명, 주소, 전화번호로 검색"
+                onSelect={(center) => {
+                  setBootstrapCenterId(center.id)
+                  setBootstrapCenterName(center.name)
+                }}
+              />
+            </div>
+          )}
 
           {role === 'patient' && (
             <>

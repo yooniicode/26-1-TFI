@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import QueryProvider from '@/components/QueryProvider'
+import { I18nProvider } from '@/lib/i18n/I18nContext'
 
 export const metadata: Metadata = {
   title: 'LinkUs 통번역 지원 플랫폼',
@@ -22,7 +23,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
-      <body><QueryProvider>{children}</QueryProvider></body>
+      <body>
+        <QueryProvider>
+          <I18nProvider>
+            {children}
+          </I18nProvider>
+        </QueryProvider>
+      </body>
     </html>
   )
 }

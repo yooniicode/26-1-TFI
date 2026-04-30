@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -27,7 +28,12 @@ public class CenterService {
     private final AdminProfileRepository adminProfileRepository;
 
     public Page<CenterResponse.Summary> list(String query, Pageable pageable) {
-        return centerRepository.searchActive(query, pageable).map(CenterResponse.Summary::from);
+        String normalizedQuery = trimToNull(query);
+        String compactQuery = normalizedQuery == null
+                ? null
+                : normalizedQuery.toLowerCase(Locale.ROOT).replaceAll("[\\s-]+", "");
+        return centerRepository.searchActive(normalizedQuery, compactQuery, pageable)
+                .map(CenterResponse.Summary::from);
     }
 
     @Transactional

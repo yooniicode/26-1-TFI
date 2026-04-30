@@ -3,16 +3,46 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { cookies } from 'next/headers'
 import type { EmailOtpType } from '@supabase/supabase-js'
 
+function loginRedirect(origin: string, error: string) {
+  const url = new URL('/login', origin)
+  url.searchParams.set('error', error)
+  return NextResponse.redirect(url)
+}
+
+function classifyCallbackError(error?: { message?: string } | null, usedCodeFlow = false) {
+  const message = error?.message?.toLowerCase() ?? ''
+  if (
+    usedCodeFlow &&
+    (
+      message.includes('code verifier') ||
+      message.includes('verifier') ||
+      message.includes('pkce') ||
+      message.includes('flow state')
+    )
+  ) {
+    return 'auth_link_browser_mismatch'
+  }
+  if (message.includes('expired') || message.includes('invalid') || message.includes('already')) {
+    return 'auth_link_invalid'
+  }
+  return 'auth_callback_failed'
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type') as EmailOtpType | null
   const next = searchParams.get('next')
+  const callbackError = searchParams.get('error') ?? searchParams.get('error_code')
   // Docker 내부 hostname 대신 브라우저가 실제 접속한 host 사용
   const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? 'localhost:3000'
   const proto = request.headers.get('x-forwarded-proto') ?? 'http'
   const origin = `${proto}://${host}`
+
+  if (callbackError) {
+    return loginRedirect(origin, 'auth_link_invalid')
+  }
 
   if (code || (token_hash && type)) {
     const cookieStore = await cookies()
@@ -44,7 +74,9 @@ export async function GET(request: NextRequest) {
       }
       return NextResponse.redirect(`${origin}/auth/complete`)
     }
+
+    return loginRedirect(origin, classifyCallbackError(error, !!code))
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
+  return loginRedirect(origin, 'auth_callback_failed')
 }

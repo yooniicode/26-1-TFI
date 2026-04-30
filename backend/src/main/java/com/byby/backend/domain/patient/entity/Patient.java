@@ -79,4 +79,8 @@ public class Patient extends BaseEntity {
     public void linkAuthUser(UUID authUserId) {
         this.authUserId = authUserId;
     }
+
+    public void unlinkAuthUser() {
+        this.authUserId = null;
+    }
 }

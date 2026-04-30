@@ -57,7 +57,7 @@ public class AuthController {
                 var i = interpreter.get();
                 return ResponseEntity.ok(Response.success(SuccessCode.OK,
                         new AuthResponse.Me(principal.getAuthUserId(), com.byby.backend.common.enums.UserRole.interpreter,
-                                i.getName(), i.getId(),
+                                i.getName(), i.isActive() ? i.getId() : null,
                                 i.getCenter() != null ? i.getCenter().getId() : null,
                                 i.getCenter() != null ? i.getCenter().getName() : null,
                                 null)));
@@ -70,6 +70,16 @@ public class AuthController {
                         new AuthResponse.Me(principal.getAuthUserId(), com.byby.backend.common.enums.UserRole.patient, p.getName(), p.getId())));
             }
         } else {
+            var existingInterpreter = interpreterRepository.findByAuthUserId(principal.getAuthUserId());
+            if (existingInterpreter.isPresent()) {
+                var i = existingInterpreter.get();
+                return ResponseEntity.ok(Response.success(SuccessCode.OK,
+                        new AuthResponse.Me(principal.getAuthUserId(), com.byby.backend.common.enums.UserRole.interpreter,
+                                i.getName(), i.isActive() ? i.getId() : null,
+                                i.getCenter() != null ? i.getCenter().getId() : null,
+                                i.getCenter() != null ? i.getCenter().getName() : null,
+                                null)));
+            }
             var patient = patientRepository.findByAuthUserId(principal.getAuthUserId());
             if (patient.isPresent()) {
                 var p = patient.get();
@@ -82,7 +92,7 @@ public class AuthController {
                 var i = interpreter.get();
                 return ResponseEntity.ok(Response.success(SuccessCode.OK,
                         new AuthResponse.Me(principal.getAuthUserId(), com.byby.backend.common.enums.UserRole.interpreter,
-                                i.getName(), i.getId(),
+                                i.getName(), i.isActive() ? i.getId() : null,
                                 i.getCenter() != null ? i.getCenter().getId() : null,
                                 i.getCenter() != null ? i.getCenter().getName() : null,
                                 null)));
@@ -99,6 +109,14 @@ public class AuthController {
     public ResponseEntity<Response<AuthResponse.Me>> verify(
             @AuthenticationPrincipal UserPrincipal principal) {
         return me(principal);
+    }
+
+    @PostMapping("/complete-signup")
+    @Operation(summary = "?대찓??寃利????뚯썝媛??붿껌 ?숆린")
+    public ResponseEntity<Response<Void>> completeSignup(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        authService.completeSignup(principal);
+        return ResponseEntity.ok(Response.success(SuccessCode.OK));
     }
 
     @PostMapping("/register-profile")

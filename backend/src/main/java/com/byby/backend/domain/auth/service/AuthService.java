@@ -64,6 +64,22 @@ public class AuthService {
     private String adminBootstrapCode;
 
     @Transactional
+    public void completeSignup(UserPrincipal principal) {
+        if (principal == null) throw new GeneralException(GeneralErrorCode.UNAUTHORIZED);
+        findSupabaseUser(principal.getAuthUserId()).ifPresent(user -> {
+            JsonNode metadata = user.path("user_metadata");
+            Optional<UserRole> requestedRole = resolveRequestedMemberRole(metadata);
+            if (requestedRole.filter(UserRole.interpreter::equals).isEmpty()) return;
+
+            patientRepository.findByAuthUserId(principal.getAuthUserId())
+                    .ifPresent(Patient::unlinkAuthUser);
+
+            Interpreter interpreter = interpreterRepository.findByAuthUserId(principal.getAuthUserId()).orElse(null);
+            ensurePendingInterpreterProfile(principal.getAuthUserId(), user, user.path("email").asText(null), interpreter);
+        });
+    }
+
+    @Transactional
     public void registerProfile(AuthRequest.RegisterProfile req, UserPrincipal principal) {
         if (principal == null) throw new GeneralException(GeneralErrorCode.UNAUTHORIZED);
 
@@ -309,6 +325,32 @@ public class AuthService {
         return upsertInterpreterProfile(authUserId, name, phone, role, center, interpreter);
     }
 
+    private Interpreter ensurePendingInterpreterProfile(UUID authUserId, JsonNode user, String email, Interpreter interpreter) {
+        JsonNode metadata = user.path("user_metadata");
+        String name = text(metadata, "name");
+        if (!StringUtils.hasText(name)) name = emailName(email);
+        if (!StringUtils.hasText(name)) name = authUserId.toString();
+        String phone = text(metadata, "phone");
+        InterpreterRole role = resolveRequestedInterpreterRole(metadata).orElse(InterpreterRole.ACTIVIST);
+        Center center = resolveRequestedCenter(metadata);
+
+        if (interpreter == null) {
+            Interpreter created = Interpreter.builder()
+                    .authUserId(authUserId)
+                    .name(name.trim())
+                    .phone(trimToNull(phone))
+                    .role(role)
+                    .center(center)
+                    .build();
+            created.deactivate();
+            return interpreterRepository.save(created);
+        }
+
+        interpreter.updateAdminInfo(trimToNull(name), trimToNull(phone), role);
+        if (center != null) interpreter.updateCenter(center);
+        return interpreter;
+    }
+
     private Interpreter upsertInterpreterProfile(UUID authUserId, String name, String phone,
                                                  InterpreterRole role, Center center, Interpreter existing) {
         if (existing == null) {
@@ -345,7 +387,9 @@ public class AuthService {
                     ? resolveRequestedInterpreterRole(metadata).orElse(null)
                     : null;
         Center center = memberCenter(user, role, interpreter);
-        boolean approved = approvedRole.map(r -> r == role).orElse(user == null || interpreter != null);
+        UUID requestedCenterId = requestedCenterId(metadata);
+        boolean approved = approvedRole.map(r -> r == role)
+                .orElse(user == null && interpreter != null && interpreter.isActive());
         boolean profileRegistered = role == UserRole.admin ? approved : interpreter != null;
         return new AuthResponse.Member(
                 authUserId,
@@ -355,8 +399,8 @@ public class AuthService {
                 role,
                 interpreterRole,
                 interpreter != null ? interpreter.getId() : null,
-                center != null ? center.getId() : null,
-                center != null ? center.getName() : requestedCenterName(metadata),
+                center != null ? center.getId() : requestedCenterId,
+                center != null ? center.getName() : requestedCenterDisplayName(metadata),
                 profileRegistered,
                 approved
         );
@@ -365,6 +409,8 @@ public class AuthService {
     private boolean belongsToCenter(JsonNode user, UserRole role, Interpreter interpreter, Center adminCenter) {
         Center center = memberCenter(user, role, interpreter);
         if (center != null) return sameCenter(center, adminCenter);
+        UUID requestedId = requestedCenterId(user.path("user_metadata"));
+        if (requestedId != null) return requestedId.equals(adminCenter.getId());
         String requestedName = requestedCenterName(user.path("user_metadata"));
         return StringUtils.hasText(requestedName)
                 && requestedName.equalsIgnoreCase(adminCenter.getName());
@@ -390,21 +436,42 @@ public class AuthService {
     }
 
     private Center resolveRequestedCenter(JsonNode metadata) {
+        UUID centerId = requestedCenterId(metadata);
+        if (centerId != null) return centerService.find(centerId);
         String centerName = requestedCenterName(metadata);
         return StringUtils.hasText(centerName) ? centerService.getOrCreateByName(centerName) : null;
     }
 
     private String requestedCenterName(UUID authUserId) {
         return findSupabaseUser(authUserId)
-                .map(user -> requestedCenterName(user.path("user_metadata")))
+                .map(user -> requestedCenterDisplayName(user.path("user_metadata")))
                 .filter(StringUtils::hasText)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.BAD_REQUEST, "근무 센터를 입력해주세요"));
+    }
+
+    private String requestedCenterDisplayName(JsonNode metadata) {
+        String name = requestedCenterName(metadata);
+        if (StringUtils.hasText(name)) return name;
+        UUID centerId = requestedCenterId(metadata);
+        if (centerId == null) return null;
+        return centerService.find(centerId).getName();
     }
 
     private String requestedCenterName(JsonNode metadata) {
         String value = text(metadata, "requested_center_name");
         if (!StringUtils.hasText(value)) value = text(metadata, "center_name");
         return trimToNull(value);
+    }
+
+    private UUID requestedCenterId(JsonNode metadata) {
+        String value = text(metadata, "requested_center_id");
+        if (!StringUtils.hasText(value)) value = text(metadata, "center_id");
+        if (!StringUtils.hasText(value)) return null;
+        try {
+            return UUID.fromString(value.trim());
+        } catch (IllegalArgumentException e) {
+            throw new GeneralException(GeneralErrorCode.BAD_REQUEST, "Invalid center id");
+        }
     }
 
     private UserRole resolveMemberRole(JsonNode user, Interpreter interpreter) {

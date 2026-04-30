@@ -3,6 +3,7 @@ import type { InterpreterRole } from './types'
 export type RequestedMemberRole = {
   role: 'admin' | 'interpreter'
   interpreterRole?: InterpreterRole
+  centerId?: string
   centerName?: string
 }
 
@@ -35,9 +36,10 @@ export function getRequestedMemberRole(metadata?: Record<string, unknown> | null
     normalizeInterpreterRole(metadata.interpreter_role)
 
   const centerName = text(metadata.requested_center_name) ?? text(metadata.center_name) ?? undefined
+  const centerId = text(metadata.requested_center_id) ?? text(metadata.center_id) ?? undefined
 
-  if (requestedRole === 'admin') return { role: 'admin', centerName }
-  if (requestedRole === 'interpreter') return { role: 'interpreter', interpreterRole, centerName }
-  if (interpreterRole) return { role: 'interpreter', interpreterRole, centerName }
+  if (requestedRole === 'admin') return { role: 'admin', centerId, centerName }
+  if (requestedRole === 'interpreter') return { role: 'interpreter', interpreterRole, centerId, centerName }
+  if (interpreterRole) return { role: 'interpreter', interpreterRole, centerId, centerName }
   return null
 }

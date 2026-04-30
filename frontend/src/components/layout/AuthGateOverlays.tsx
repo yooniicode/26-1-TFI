@@ -33,6 +33,7 @@ export default function AuthGateOverlays({ me, pathname }: AuthGateOverlaysProps
       const request = getRequestedMemberRole(session?.user.user_metadata ?? null)
       setPendingRequest(request)
       if (request?.centerName) setBootstrapCenterName(request.centerName)
+      if (request) authApi.completeSignup().catch(() => undefined)
     })
   }, [])
 
@@ -66,7 +67,11 @@ export default function AuthGateOverlays({ me, pathname }: AuthGateOverlaysProps
     }
   }
 
-  const needsApproval = !!me && me.role === 'patient' && !!pendingRequest && !pathname.startsWith('/auth/')
+  const needsApproval = !!me && !!pendingRequest && !pathname.startsWith('/auth/') && (
+    pendingRequest.role === 'admin'
+      ? me.role !== 'admin'
+      : me.role !== 'interpreter' || !me.entityId
+  )
   const needsProfile = !!me && me.role !== 'admin' && !me.entityId && !needsApproval && !pathname.startsWith('/auth/')
 
   return (
