@@ -256,7 +256,7 @@ public class AuthService {
         requireAdmin(principal);
         Center adminCenter = adminService.getAdminCenter(principal);
 
-        Map<UUID, Interpreter> interpretersByAuthId = interpreterRepository.findAll().stream()
+        Map<UUID, Interpreter> interpretersByAuthId = interpreterRepository.findByCenterId(adminCenter.getId()).stream()
                 .collect(Collectors.toMap(Interpreter::getAuthUserId, Function.identity(), (a, b) -> a));
 
         if (!StringUtils.hasText(supabaseUrl) || !StringUtils.hasText(supabaseServiceKey)) {

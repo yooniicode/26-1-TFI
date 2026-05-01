@@ -27,11 +27,15 @@ export const vi: AppTranslation = {
   },
   nav: {
     dashboard: 'Trang chủ',
+    home: 'Trang chủ',
     consultations: 'Báo cáo',
     patients: 'Người di cư',
     interpreters: 'Phiên dịch viên',
     handovers: 'Bàn giao',
     matching: 'Phân công',
+    members: 'Thành viên',
+    new_consultation: 'Viết báo cáo',
+    my_records: 'Hồ sơ của tôi',
     mypage: 'Trang cá nhân',
   },
   login: {

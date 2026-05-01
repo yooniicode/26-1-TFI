@@ -27,11 +27,15 @@ export const en: AppTranslation = {
   },
   nav: {
     dashboard: 'Dashboard',
+    home: 'Home',
     consultations: 'Reports',
     patients: 'Patients',
     interpreters: 'Interpreters',
     handovers: 'Handovers',
     matching: 'Matching',
+    members: 'Members',
+    new_consultation: 'Write Report',
+    my_records: 'My Records',
     mypage: 'My Page',
   },
   login: {

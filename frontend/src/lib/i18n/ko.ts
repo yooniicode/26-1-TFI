@@ -25,11 +25,15 @@
   },
   nav: {
     dashboard: '대시보드',
+    home: '홈',
     consultations: '보고서',
     patients: '이주민',
     interpreters: '통번역가',
     handovers: '인수인계',
     matching: '매칭',
+    members: '회원',
+    new_consultation: '일지 작성',
+    my_records: '내 기록',
     mypage: '내 정보',
   },
   login: {

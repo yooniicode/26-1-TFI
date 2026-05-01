@@ -6,10 +6,11 @@ import AppShell from '@/components/AppShell'
 import Badge from '@/components/ui/Badge'
 import Spinner from '@/components/ui/Spinner'
 import EmptyState from '@/components/ui/EmptyState'
-import { consultationApi, authApi } from '@/lib/api'
-import type { Consultation, AuthMe } from '@/lib/types'
+import { consultationApi } from '@/lib/api'
+import type { Consultation } from '@/lib/types'
 import { useEnumLabels } from '@/lib/i18n/enumLabels'
 import { useTranslation } from '@/lib/i18n/I18nContext'
+import { useMe } from '@/hooks/useMe'
 
 type SortBy = 'consultationDate' | 'createdAt' | 'updatedAt'
 type SortDirection = 'asc' | 'desc'
@@ -17,8 +18,8 @@ type SortDirection = 'asc' | 'desc'
 export default function ConsultationsPage() {
   const { t } = useTranslation()
   const labels = useEnumLabels()
+  const { data: me } = useMe()
   const [items, setItems] = useState<Consultation[]>([])
-  const [me, setMe] = useState<AuthMe | null>(null)
   const [loading, setLoading] = useState(true)
   const [patientQuery, setPatientQuery] = useState('')
   const [sortBy, setSortBy] = useState<SortBy>('consultationDate')
@@ -32,11 +33,7 @@ export default function ConsultationsPage() {
 
   useEffect(() => {
     setLoading(true)
-    authApi.me()
-      .then(meRes => {
-        setMe(meRes.payload)
-        return consultationApi.list({ page: 0, patientQuery, sortBy, direction })
-      })
+    consultationApi.list({ page: 0, patientQuery, sortBy, direction })
       .then(cRes => setItems(cRes.payload ?? []))
       .catch(() => setItems([]))
       .finally(() => setLoading(false))

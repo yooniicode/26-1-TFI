@@ -5,35 +5,34 @@ import Link from 'next/link'
 import AppShell from '@/components/AppShell'
 import Spinner from '@/components/ui/Spinner'
 import EmptyState from '@/components/ui/EmptyState'
-import { authApi, patientApi, scriptApi } from '@/lib/api'
-import type { AuthMe, MedicalScript, PatientReport } from '@/lib/types'
+import { patientApi, scriptApi } from '@/lib/api'
+import type { MedicalScript, PatientReport } from '@/lib/types'
 import { useEnumLabels } from '@/lib/i18n/enumLabels'
 import { useTranslation } from '@/lib/i18n/I18nContext'
+import { useMe } from '@/hooks/useMe'
 
 export default function MyRecordsPage() {
   const { t } = useTranslation()
   const labels = useEnumLabels()
-  const [me, setMe] = useState<AuthMe | null>(null)
+  const { data: me, isLoading: meLoading } = useMe()
   const [records, setRecords] = useState<PatientReport[]>([])
   const [scripts, setScripts] = useState<MedicalScript[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    authApi.me().then(meRes => {
-      setMe(meRes.payload)
-      const patientId = meRes.payload.entityId
-      if (!patientId) { setLoading(false); return }
-      Promise.all([
-        patientApi.myRecords(patientId),
-        scriptApi.byPatient(patientId),
-      ]).then(([rRes, sRes]) => {
-        setRecords(rRes.payload ?? [])
-        setScripts(sRes.payload ?? [])
-      }).finally(() => setLoading(false))
-    }).catch(() => setLoading(false))
-  }, [])
+    const patientId = me?.entityId
+    if (!patientId) return
+    setLoading(true)
+    Promise.all([
+      patientApi.myRecords(patientId),
+      scriptApi.byPatient(patientId),
+    ]).then(([rRes, sRes]) => {
+      setRecords(rRes.payload ?? [])
+      setScripts(sRes.payload ?? [])
+    }).catch(() => {}).finally(() => setLoading(false))
+  }, [me?.entityId])
 
-  if (loading) return <AppShell><Spinner /></AppShell>
+  if (meLoading || loading) return <AppShell><Spinner /></AppShell>
 
   return (
     <AppShell>

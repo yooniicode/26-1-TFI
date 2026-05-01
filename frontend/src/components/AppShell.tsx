@@ -5,16 +5,18 @@ import clsx from 'clsx'
 import AppHeader from '@/components/layout/AppHeader'
 import AuthGateOverlays from '@/components/layout/AuthGateOverlays'
 import { DesktopSidebar, DesktopTopNav, MobileBottomNav } from '@/components/layout/AppNavigation'
-import { APP_NAV_ITEMS } from '@/components/layout/navItems'
+import { getNavItems } from '@/components/layout/navItems'
 import { useLayoutMode } from '@/hooks/useLayoutMode'
 import { useMe } from '@/hooks/useMe'
+import { useTranslation } from '@/lib/i18n/I18nContext'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { data: me } = useMe()
   const { layoutMode, setLayoutMode } = useLayoutMode()
+  const { t } = useTranslation()
   const isDesktopMode = layoutMode === 'desktop'
-  const visibleNav = me && me.role ? APP_NAV_ITEMS.filter(item => item.roles.includes(me.role!)) : []
+  const visibleNav = me?.role ? getNavItems(t).filter(item => item.roles.includes(me.role!)) : []
 
   return (
     <div className={clsx(

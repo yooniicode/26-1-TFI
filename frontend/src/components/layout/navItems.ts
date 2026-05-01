@@ -1,3 +1,4 @@
+import type { AppTranslation } from '@/lib/i18n/ko'
 import type { UserRole } from '@/lib/types'
 
 export interface NavItem {
@@ -7,14 +8,16 @@ export interface NavItem {
   roles: UserRole[]
 }
 
-export const APP_NAV_ITEMS: NavItem[] = [
-  { href: '/dashboard',     label: '홈',       icon: '⌂', roles: ['admin','interpreter','patient'] },
-  { href: '/consultations', label: '보고서',   icon: '□', roles: ['admin','interpreter'] },
-  { href: '/patients',      label: '이주민',   icon: '◇', roles: ['admin','interpreter'] },
-  { href: '/handovers',     label: '인수인계', icon: '↔', roles: ['admin','interpreter'] },
-  { href: '/matching',      label: '매칭',     icon: '◎', roles: ['admin'] },
-  { href: '/interpreters',  label: '통번역가', icon: '▣', roles: ['admin'] },
-  { href: '/members',       label: '회원',     icon: '○', roles: ['admin'] },
-  { href: '/consultations/new', label: '일지 작성', icon: '✎', roles: ['interpreter'] },
-  { href: '/my-records',    label: '내 기록',  icon: '□', roles: ['patient'] },
-]
+export function getNavItems(t: AppTranslation): NavItem[] {
+  return [
+    { href: '/dashboard',          label: t.nav.home,             icon: '⌂', roles: ['admin', 'interpreter', 'patient'] },
+    { href: '/consultations',      label: t.nav.consultations,    icon: '□', roles: ['admin', 'interpreter'] },
+    { href: '/patients',           label: t.nav.patients,         icon: '◇', roles: ['admin', 'interpreter'] },
+    { href: '/handovers',          label: t.nav.handovers,        icon: '↔', roles: ['admin', 'interpreter'] },
+    { href: '/matching',           label: t.nav.matching,         icon: '◎', roles: ['admin'] },
+    { href: '/interpreters',       label: t.nav.interpreters,     icon: '▣', roles: ['admin'] },
+    { href: '/members',            label: t.nav.members,          icon: '○', roles: ['admin'] },
+    { href: '/consultations/new',  label: t.nav.new_consultation, icon: '✎', roles: ['interpreter'] },
+    { href: '/my-records',         label: t.nav.my_records,       icon: '□', roles: ['patient'] },
+  ]
+}
