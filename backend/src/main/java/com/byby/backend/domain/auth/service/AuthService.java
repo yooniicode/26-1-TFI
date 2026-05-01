@@ -63,6 +63,53 @@ public class AuthService {
     @Value("${byby.admin.bootstrap-code:}")
     private String adminBootstrapCode;
 
+    public AuthResponse.Me getMe(UserPrincipal principal) {
+        if (principal == null) throw new GeneralException(GeneralErrorCode.UNAUTHORIZED);
+
+        if (principal.getRole() == UserRole.admin) {
+            AdminProfile profile = adminService.getOrCreateProfile(principal.getAuthUserId());
+            String nickname = profile.getNickname() != null ? profile.getNickname() : "관리자";
+            return new AuthResponse.Me(principal.getAuthUserId(), UserRole.admin,
+                    nickname, null,
+                    profile.getCenter() != null ? profile.getCenter().getId() : null,
+                    profile.getEffectiveCenterName(), profile.getNickname());
+        }
+
+        if (principal.getRole() == UserRole.interpreter) {
+            var interpreter = interpreterRepository.findByAuthUserId(principal.getAuthUserId());
+            if (interpreter.isPresent()) {
+                var i = interpreter.get();
+                return new AuthResponse.Me(principal.getAuthUserId(), UserRole.interpreter,
+                        i.getName(), i.isActive() ? i.getId() : null,
+                        i.getCenter() != null ? i.getCenter().getId() : null,
+                        i.getCenter() != null ? i.getCenter().getName() : null,
+                        null);
+            }
+            var patient = patientRepository.findByAuthUserId(principal.getAuthUserId());
+            if (patient.isPresent()) {
+                var p = patient.get();
+                return new AuthResponse.Me(principal.getAuthUserId(), UserRole.patient, p.getName(), p.getId());
+            }
+        } else {
+            var interpreter = interpreterRepository.findByAuthUserId(principal.getAuthUserId());
+            if (interpreter.isPresent()) {
+                var i = interpreter.get();
+                return new AuthResponse.Me(principal.getAuthUserId(), UserRole.interpreter,
+                        i.getName(), i.isActive() ? i.getId() : null,
+                        i.getCenter() != null ? i.getCenter().getId() : null,
+                        i.getCenter() != null ? i.getCenter().getName() : null,
+                        null);
+            }
+            var patient = patientRepository.findByAuthUserId(principal.getAuthUserId());
+            if (patient.isPresent()) {
+                var p = patient.get();
+                return new AuthResponse.Me(principal.getAuthUserId(), UserRole.patient, p.getName(), p.getId());
+            }
+        }
+
+        return new AuthResponse.Me(principal.getAuthUserId(), principal.getRole(), null, null);
+    }
+
     @Transactional
     public void completeSignup(UserPrincipal principal) {
         if (principal == null) throw new GeneralException(GeneralErrorCode.UNAUTHORIZED);

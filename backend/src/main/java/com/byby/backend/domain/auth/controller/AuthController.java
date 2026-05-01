@@ -1,17 +1,13 @@
-﻿package com.byby.backend.domain.auth.controller;
+package com.byby.backend.domain.auth.controller;
 
 import com.byby.backend.common.response.Response;
 import com.byby.backend.common.response.code.SuccessCode;
 import com.byby.backend.common.exception.GeneralException;
 import com.byby.backend.common.response.code.GeneralErrorCode;
 import com.byby.backend.common.security.UserPrincipal;
-import com.byby.backend.domain.admin.entity.AdminProfile;
-import com.byby.backend.domain.admin.service.AdminService;
-import com.byby.backend.domain.interpreter.repository.InterpreterRepository;
 import com.byby.backend.domain.auth.dto.AuthRequest;
 import com.byby.backend.domain.auth.dto.AuthResponse;
 import com.byby.backend.domain.auth.service.AuthService;
-import com.byby.backend.domain.patient.repository.PatientRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -30,78 +26,13 @@ import java.util.UUID;
 @Tag(name = "Auth", description = "인증/내 정보 API")
 public class AuthController {
 
-    private final InterpreterRepository interpreterRepository;
-    private final PatientRepository patientRepository;
     private final AuthService authService;
-    private final AdminService adminService;
 
     @GetMapping("/me")
     @Operation(summary = "내 인증/역할 정보 조회")
     public ResponseEntity<Response<AuthResponse.Me>> me(
             @AuthenticationPrincipal UserPrincipal principal) {
-        if (principal == null) throw new GeneralException(GeneralErrorCode.UNAUTHORIZED);
-        if (principal.getRole() == com.byby.backend.common.enums.UserRole.admin) {
-            AdminProfile profile = adminService.getOrCreateProfile(principal.getAuthUserId());
-            String nickname = profile.getNickname() != null ? profile.getNickname() : "관리자";
-            return ResponseEntity.ok(Response.success(SuccessCode.OK,
-                    new AuthResponse.Me(principal.getAuthUserId(), com.byby.backend.common.enums.UserRole.admin,
-                            nickname, null,
-                            profile.getCenter() != null ? profile.getCenter().getId() : null,
-                            profile.getEffectiveCenterName(), profile.getNickname())));
-        }
-
-        // JWT role에 맞는 테이블을 먼저 확인, 없으면 반대 테이블 fallback
-        if (principal.getRole() == com.byby.backend.common.enums.UserRole.interpreter) {
-            var interpreter = interpreterRepository.findByAuthUserId(principal.getAuthUserId());
-            if (interpreter.isPresent()) {
-                var i = interpreter.get();
-                return ResponseEntity.ok(Response.success(SuccessCode.OK,
-                        new AuthResponse.Me(principal.getAuthUserId(), com.byby.backend.common.enums.UserRole.interpreter,
-                                i.getName(), i.isActive() ? i.getId() : null,
-                                i.getCenter() != null ? i.getCenter().getId() : null,
-                                i.getCenter() != null ? i.getCenter().getName() : null,
-                                null)));
-            }
-            // Supabase 역할 동기화 지연 시 patient 테이블 확인
-            var patient = patientRepository.findByAuthUserId(principal.getAuthUserId());
-            if (patient.isPresent()) {
-                var p = patient.get();
-                return ResponseEntity.ok(Response.success(SuccessCode.OK,
-                        new AuthResponse.Me(principal.getAuthUserId(), com.byby.backend.common.enums.UserRole.patient, p.getName(), p.getId())));
-            }
-        } else {
-            var existingInterpreter = interpreterRepository.findByAuthUserId(principal.getAuthUserId());
-            if (existingInterpreter.isPresent()) {
-                var i = existingInterpreter.get();
-                return ResponseEntity.ok(Response.success(SuccessCode.OK,
-                        new AuthResponse.Me(principal.getAuthUserId(), com.byby.backend.common.enums.UserRole.interpreter,
-                                i.getName(), i.isActive() ? i.getId() : null,
-                                i.getCenter() != null ? i.getCenter().getId() : null,
-                                i.getCenter() != null ? i.getCenter().getName() : null,
-                                null)));
-            }
-            var patient = patientRepository.findByAuthUserId(principal.getAuthUserId());
-            if (patient.isPresent()) {
-                var p = patient.get();
-                return ResponseEntity.ok(Response.success(SuccessCode.OK,
-                        new AuthResponse.Me(principal.getAuthUserId(), com.byby.backend.common.enums.UserRole.patient, p.getName(), p.getId())));
-            }
-            // Supabase 역할 동기화 지연 시 interpreter 테이블 확인
-            var interpreter = interpreterRepository.findByAuthUserId(principal.getAuthUserId());
-            if (interpreter.isPresent()) {
-                var i = interpreter.get();
-                return ResponseEntity.ok(Response.success(SuccessCode.OK,
-                        new AuthResponse.Me(principal.getAuthUserId(), com.byby.backend.common.enums.UserRole.interpreter,
-                                i.getName(), i.isActive() ? i.getId() : null,
-                                i.getCenter() != null ? i.getCenter().getId() : null,
-                                i.getCenter() != null ? i.getCenter().getName() : null,
-                                null)));
-            }
-        }
-
-        // 프로필 미등록
-        return ResponseEntity.ok(Response.success(SuccessCode.OK,
-                new AuthResponse.Me(principal.getAuthUserId(), principal.getRole(), null, null)));
+        return ResponseEntity.ok(Response.success(SuccessCode.OK, authService.getMe(principal)));
     }
 
     @GetMapping("/email-exists")
